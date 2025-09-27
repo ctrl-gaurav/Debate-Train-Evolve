@@ -1,0 +1,43 @@
+# DTE Framework Dependencies
+
+# Core ML libraries
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.24.0
+peft>=0.7.0
+datasets>=2.14.0
+
+# Training and optimization
+deepspeed>=0.11.0
+wandb>=0.16.0
+tensorboard>=2.14.0
+
+# Data processing
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Configuration and utilities
+pyyaml>=6.0
+click>=8.1.0
+tqdm>=4.66.0
+rich>=13.0.0
+
+# Evaluation and metrics
+evaluate>=0.4.0
+rouge-score>=0.1.2
+bleu>=0.2.0
+
+# Development and testing
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Optional: for specific models
+bitsandbytes>=0.41.0  # For quantization
+flash-attn>=2.3.0     # For efficient attention (optional)
+
+# System utilities
+psutil>=5.9.0
+gpustat>=1.1.0
