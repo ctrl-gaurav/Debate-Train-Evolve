@@ -13,12 +13,13 @@ Tests cover:
 """
 
 import os
+
 import pytest
 
 # Pin to GPU 4 before any CUDA initialization
 os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
-from dte.core.config import ModelConfig, DebateConfig
+from dte.core.config import DebateConfig, ModelConfig
 from dte.debate.manager import DebateManager
 from dte.training.reward_model import DTERewardModel
 
@@ -59,9 +60,7 @@ class TestRewardIntegration:
             responses=[response_text],
             ground_truth="42",
         )
-        assert set(rewards.keys()) == {
-            "correctness", "int", "strict_format", "soft_format", "xmlcount"
-        }
+        assert set(rewards.keys()) == {"correctness", "int", "strict_format", "soft_format", "xmlcount"}
         for name, values in rewards.items():
             assert len(values) == 1
             assert isinstance(values[0], float), f"{name} reward is not float"
@@ -85,9 +84,7 @@ class TestRewardIntegration:
         assert len(combined) == 1
 
         # Manually compute expected weighted sum
-        expected = sum(
-            rewards[k][0] * weights[k] for k in rewards
-        )
+        expected = sum(rewards[k][0] * weights[k] for k in rewards)
         assert combined[0] == pytest.approx(expected, abs=1e-6)
 
     def test_reward_statistics(self, debate_result, reward_model):
@@ -196,10 +193,7 @@ class TestRewardEdgeCases:
 
     def test_very_long_response(self, reward_model):
         """Very long response should not crash."""
-        long_response = (
-            "<reasoning>\n" + "This is a long step. " * 500 +
-            "\n</reasoning>\n<answer>\n42\n</answer>\n"
-        )
+        long_response = "<reasoning>\n" + "This is a long step. " * 500 + "\n</reasoning>\n<answer>\n42\n</answer>\n"
         rewards = reward_model.calculate_all_rewards(
             query="What is 6*7?",
             responses=[long_response],
@@ -233,11 +227,7 @@ class TestRewardEdgeCases:
 
     def test_duplicate_xml_tags(self, reward_model):
         """Duplicate XML tags should reduce xmlcount reward."""
-        dup = (
-            "<reasoning>step1</reasoning>\n"
-            "<reasoning>step2</reasoning>\n"
-            "<answer>42</answer>\n"
-        )
+        dup = "<reasoning>step1</reasoning>\n<reasoning>step2</reasoning>\n<answer>42</answer>\n"
         rewards = reward_model.calculate_all_rewards(
             query="What is 6*7?",
             responses=[dup],
@@ -260,10 +250,7 @@ class TestRewardEdgeCases:
             ground_truth="42",
         )
 
-        clean = (
-            "<reasoning>\nstep\n</reasoning>\n"
-            "<answer>\n42\n</answer>\n"
-        )
+        clean = "<reasoning>\nstep\n</reasoning>\n<answer>\n42\n</answer>\n"
         rewards_clean = reward_model.calculate_all_rewards(
             query="What is 6*7?",
             responses=[clean],
@@ -310,8 +297,11 @@ class TestRewardOnRealModelOutput:
 
                 # Combined reward should work too
                 weights = {
-                    "correctness": 2.0, "int": 0.5,
-                    "strict_format": 0.5, "soft_format": 0.5, "xmlcount": 0.5,
+                    "correctness": 2.0,
+                    "int": 0.5,
+                    "strict_format": 0.5,
+                    "soft_format": 0.5,
+                    "xmlcount": 0.5,
                 }
                 combined = reward_model.combine_rewards(rewards, weights)
                 assert len(combined) == len(round_responses)

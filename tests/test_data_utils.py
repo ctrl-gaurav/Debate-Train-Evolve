@@ -1,18 +1,19 @@
 """Tests for data utility functions."""
 
 import json
-import pytest
 from pathlib import Path
 
+import pytest
+
 from dte.utils.data_utils import (
+    deduplicate_data,
+    filter_by_length,
     load_jsonl,
+    merge_datasets,
+    sample_balanced,
     save_jsonl,
     split_dataset,
-    filter_by_length,
-    deduplicate_data,
-    sample_balanced,
     validate_data_format,
-    merge_datasets,
 )
 
 
@@ -132,11 +133,7 @@ class TestSampleBalanced:
     """Tests for balanced sampling."""
 
     def test_balanced_sampling(self):
-        data = [
-            {"label": "A", "val": i} for i in range(10)
-        ] + [
-            {"label": "B", "val": i} for i in range(10)
-        ]
+        data = [{"label": "A", "val": i} for i in range(10)] + [{"label": "B", "val": i} for i in range(10)]
         result = sample_balanced(data, "label", 3)
         label_counts = {}
         for item in result:

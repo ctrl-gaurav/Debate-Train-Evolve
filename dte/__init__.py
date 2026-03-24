@@ -52,6 +52,7 @@ try:
     from .debate.prompts import DebatePromptManager, DebateResponse
     from .training.grpo_trainer import GRPOTrainer
     from .training.reward_model import DTERewardModel
+
     _FULL_IMPORTS_AVAILABLE = True
 except ImportError:
     DTEPipeline = None  # type: ignore[assignment,misc]
@@ -90,18 +91,20 @@ __all__ = [
 
 # Add ML-dependent exports when available
 if _FULL_IMPORTS_AVAILABLE:
-    __all__.extend([
-        "DTEPipeline",
-        "DebateManager",
-        "DebateResult",
-        "DebateAgent",
-        "DebatePromptManager",
-        "DebateResponse",
-        "GRPOTrainer",
-        "DTERewardModel",
-        "DebateDataGenerator",
-        "DatasetManager",
-    ])
+    __all__.extend(
+        [
+            "DTEPipeline",
+            "DebateManager",
+            "DebateResult",
+            "DebateAgent",
+            "DebatePromptManager",
+            "DebateResponse",
+            "GRPOTrainer",
+            "DTERewardModel",
+            "DebateDataGenerator",
+            "DatasetManager",
+        ]
+    )
 
 
 def debate(
@@ -163,6 +166,7 @@ def debate(
     if verbose:
         from .core.config import LoggingConfig
         from .core.logger import DTELogger
+
         log_cfg = LoggingConfig(level="INFO")
         logger = DTELogger(log_cfg, "quick_debate")
 
@@ -197,8 +201,7 @@ def from_config(config_path: str) -> "DTEPipeline":
     """
     if not _FULL_IMPORTS_AVAILABLE:
         raise RuntimeError(
-            "ML dependencies (torch, transformers) are required. "
-            "Install with: pip install torch transformers"
+            "ML dependencies (torch, transformers) are required. Install with: pip install torch transformers"
         )
 
     config = DTEConfig.from_yaml(config_path)
@@ -243,8 +246,7 @@ def train(
     """
     if not _FULL_IMPORTS_AVAILABLE:
         raise RuntimeError(
-            "ML dependencies (torch, transformers) are required. "
-            "Install with: pip install torch transformers"
+            "ML dependencies (torch, transformers) are required. Install with: pip install torch transformers"
         )
 
     model_config = ModelConfig(base_model_name=model)
@@ -259,6 +261,7 @@ def train(
     if verbose:
         from .core.config import LoggingConfig
         from .core.logger import DTELogger
+
         log_cfg = LoggingConfig(level="INFO")
         logger = DTELogger(log_cfg, "quick_train")
 
@@ -312,8 +315,7 @@ def evaluate(
     """
     if not _FULL_IMPORTS_AVAILABLE:
         raise RuntimeError(
-            "ML dependencies (torch, transformers) are required. "
-            "Install with: pip install torch transformers"
+            "ML dependencies (torch, transformers) are required. Install with: pip install torch transformers"
         )
 
     if datasets is None:
@@ -334,9 +336,7 @@ def evaluate(
 
     evaluator = DTEEvaluator(datasets_config, debate_config, model_config, logger)
     try:
-        metrics = evaluator.evaluate_model(
-            evolution_round=0, max_samples_per_dataset=max_samples
-        )
+        metrics = evaluator.evaluate_model(evolution_round=0, max_samples_per_dataset=max_samples)
         report = evaluator.create_evaluation_report(metrics, 0)
         return report
     finally:

@@ -1,26 +1,27 @@
 """Tests for DTE configuration loading and validation."""
 
-import pytest
-import yaml
 from pathlib import Path
 
+import pytest
+import yaml
+
 from dte.core.config import (
-    DTEConfig,
-    ModelConfig,
+    DatasetsConfig,
     DebateConfig,
-    TrainingConfig,
+    DebatePromptingConfig,
+    DTEConfig,
     EvolutionConfig,
+    ExperimentConfig,
+    GRPOConfig,
     HardwareConfig,
+    LoggingConfig,
+    LoRAConfig,
+    ModelConfig,
     PathsConfig,
     RewardsConfig,
-    GRPOConfig,
-    LoRAConfig,
-    LoggingConfig,
-    ExperimentConfig,
     SafetyConfig,
-    DatasetsConfig,
     TemperatureAnnealingConfig,
-    DebatePromptingConfig,
+    TrainingConfig,
     WandbConfig,
 )
 
@@ -158,6 +159,7 @@ class TestDTEConfig:
 
     def test_validate_and_raise(self):
         from dte.utils.helpers import ConfigurationError
+
         cfg = DTEConfig()
         cfg.model.temperature = 10.0
         with pytest.raises(ConfigurationError):

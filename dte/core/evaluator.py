@@ -20,6 +20,7 @@ from .logger import DTELogger
 @dataclass
 class EvaluationMetrics:
     """Comprehensive evaluation metrics."""
+
     overall_accuracy: float
     total_samples: int
     correct_samples: int
@@ -42,8 +43,7 @@ class DTEEvaluator:
     including multi-agent debate evaluation and detailed metrics calculation.
     """
 
-    def __init__(self, config_datasets, config_debate, config_model,
-                 logger: Optional[DTELogger] = None):
+    def __init__(self, config_datasets, config_debate, config_model, logger: Optional[DTELogger] = None):
         """
         Initialize DTE evaluator.
 
@@ -66,8 +66,7 @@ class DTEEvaluator:
         self.current_round = 0
         self.evaluation_results = []
 
-    def evaluate_model(self, evolution_round: int,
-                      max_samples_per_dataset: Optional[int] = None) -> EvaluationMetrics:
+    def evaluate_model(self, evolution_round: int, max_samples_per_dataset: Optional[int] = None) -> EvaluationMetrics:
         """
         Perform comprehensive model evaluation.
 
@@ -103,9 +102,7 @@ class DTEEvaluator:
             if self.logger:
                 self.logger.info(f"Evaluating on {dataset_name}")
 
-            dataset_metrics = self._evaluate_on_dataset(
-                dataset_name, evolution_round, max_samples_per_dataset
-            )
+            dataset_metrics = self._evaluate_on_dataset(dataset_name, evolution_round, max_samples_per_dataset)
 
             # Aggregate metrics
             total_samples += dataset_metrics["total_samples"]
@@ -123,7 +120,7 @@ class DTEEvaluator:
                 "accuracy": dataset_metrics["accuracy"],
                 "samples": dataset_metrics["total_samples"],
                 "consensus_rate": dataset_metrics["consensus_rate"],
-                "debate_helped_rate": dataset_metrics["debate_helped_rate"]
+                "debate_helped_rate": dataset_metrics["debate_helped_rate"],
             }
 
         evaluation_time = time.time() - start_time
@@ -150,7 +147,7 @@ class DTEEvaluator:
             debate_helped_rate=debate_helped_rate,
             average_reasoning_length=average_reasoning_length,
             evaluation_time=evaluation_time,
-            per_dataset_metrics=per_dataset_metrics
+            per_dataset_metrics=per_dataset_metrics,
         )
 
         if self.logger:
@@ -161,8 +158,9 @@ class DTEEvaluator:
 
         return metrics
 
-    def _evaluate_on_dataset(self, dataset_name: str, evolution_round: int,
-                           max_samples: Optional[int] = None) -> Dict[str, Any]:
+    def _evaluate_on_dataset(
+        self, dataset_name: str, evolution_round: int, max_samples: Optional[int] = None
+    ) -> Dict[str, Any]:
         """
         Evaluate model on a specific dataset.
 
@@ -176,9 +174,7 @@ class DTEEvaluator:
         """
         # Load test dataset
         try:
-            dataset = self.dataset_manager.load_dataset_by_name(
-                dataset_name, split="test", max_samples=max_samples
-            )
+            dataset = self.dataset_manager.load_dataset_by_name(dataset_name, split="test", max_samples=max_samples)
             processed_dataset = self.dataset_manager.preprocess_dataset(dataset, dataset_name)
         except Exception as e:
             if self.logger:
@@ -216,9 +212,7 @@ class DTEEvaluator:
                 debate_result = self.debate_manager.conduct_debate(query, task_type)
 
                 # Check correctness
-                is_correct = self._check_answer_correctness(
-                    debate_result.final_answer, ground_truth, task_type
-                )
+                is_correct = self._check_answer_correctness(debate_result.final_answer, ground_truth, task_type)
 
                 # Update metrics
                 total_samples += 1
@@ -231,9 +225,7 @@ class DTEEvaluator:
                     consensus_reached += 1
 
                 # Analyze sycophancy and transitions
-                syc_count, c2i, i2c, helped = self._analyze_debate_dynamics(
-                    debate_result, ground_truth, task_type
-                )
+                syc_count, c2i, i2c, helped = self._analyze_debate_dynamics(debate_result, ground_truth, task_type)
 
                 sycophancy_instances += syc_count
                 correct_to_incorrect += c2i
@@ -244,7 +236,8 @@ class DTEEvaluator:
                 # Calculate reasoning length
                 if debate_result.all_responses:
                     reasoning_lengths = [
-                        len(response.reasoning) for round_responses in debate_result.all_responses
+                        len(response.reasoning)
+                        for round_responses in debate_result.all_responses
                         for response in round_responses
                     ]
                     total_reasoning_length += sum(reasoning_lengths) / len(reasoning_lengths)
@@ -271,11 +264,10 @@ class DTEEvaluator:
             "consensus_reached": consensus_reached,
             "consensus_rate": consensus_rate,
             "debate_helped_rate": debate_helped_rate,
-            "total_reasoning_length": total_reasoning_length
+            "total_reasoning_length": total_reasoning_length,
         }
 
-    def _check_answer_correctness(self, predicted_answer: str, ground_truth: str,
-                                task_type: str) -> bool:
+    def _check_answer_correctness(self, predicted_answer: str, ground_truth: str, task_type: str) -> bool:
         """
         Check if predicted answer matches ground truth.
 
@@ -308,8 +300,7 @@ class DTEEvaluator:
             # For other tasks, string comparison
             return predicted_answer.strip().lower() == ground_truth.strip().lower()
 
-    def _analyze_debate_dynamics(self, debate_result, ground_truth: str,
-                               task_type: str) -> Tuple[int, int, int, bool]:
+    def _analyze_debate_dynamics(self, debate_result, ground_truth: str, task_type: str) -> Tuple[int, int, int, bool]:
         """
         Analyze debate dynamics for sycophancy and improvement patterns.
 
@@ -330,9 +321,7 @@ class DTEEvaluator:
         for round_idx, round_responses in enumerate(debate_result.all_responses):
             for agent_idx, response in enumerate(round_responses):
                 agent_id = f"agent_{agent_idx}"
-                is_correct = self._check_answer_correctness(
-                    response.extracted_answer, ground_truth, task_type
-                )
+                is_correct = self._check_answer_correctness(response.extracted_answer, ground_truth, task_type)
                 agent_correctness[agent_id].append(is_correct)
 
         # Analyze transitions
@@ -342,7 +331,7 @@ class DTEEvaluator:
 
         for agent_id, correctness_history in agent_correctness.items():
             for i in range(1, len(correctness_history)):
-                prev_correct = correctness_history[i-1]
+                prev_correct = correctness_history[i - 1]
                 curr_correct = correctness_history[i]
 
                 if prev_correct and not curr_correct:
@@ -355,13 +344,10 @@ class DTEEvaluator:
         if len(debate_result.all_responses) > 1:
             # Check if final answer is better than initial consensus
             initial_answers = [r.extracted_answer for r in debate_result.all_responses[0]]
-            initial_correct = [self._check_answer_correctness(ans, ground_truth, task_type)
-                             for ans in initial_answers]
+            initial_correct = [self._check_answer_correctness(ans, ground_truth, task_type) for ans in initial_answers]
             initial_consensus_correct = sum(initial_correct) > len(initial_correct) / 2
 
-            final_correct = self._check_answer_correctness(
-                debate_result.final_answer, ground_truth, task_type
-            )
+            final_correct = self._check_answer_correctness(debate_result.final_answer, ground_truth, task_type)
 
             debate_helped = final_correct and not initial_consensus_correct
         else:
@@ -369,8 +355,7 @@ class DTEEvaluator:
 
         return sycophancy_count, correct_to_incorrect, incorrect_to_correct, debate_helped
 
-    def create_evaluation_report(self, metrics: EvaluationMetrics,
-                               evolution_round: int) -> Dict[str, Any]:
+    def create_evaluation_report(self, metrics: EvaluationMetrics, evolution_round: int) -> Dict[str, Any]:
         """
         Create a comprehensive evaluation report.
 
@@ -391,22 +376,20 @@ class DTEEvaluator:
                 "debate_helped_rate": metrics.debate_helped_rate,
                 "average_debate_rounds": metrics.average_debate_rounds,
                 "sycophancy_rate": metrics.sycophancy_rate,
-                "evaluation_time": metrics.evaluation_time
+                "evaluation_time": metrics.evaluation_time,
             },
             "per_dataset_metrics": metrics.per_dataset_metrics,
             "transition_analysis": {
                 "correct_to_incorrect_rate": metrics.correct_to_incorrect_rate,
                 "incorrect_to_correct_rate": metrics.incorrect_to_correct_rate,
-                "net_improvement_rate": metrics.incorrect_to_correct_rate - metrics.correct_to_incorrect_rate
+                "net_improvement_rate": metrics.incorrect_to_correct_rate - metrics.correct_to_incorrect_rate,
             },
-            "reasoning_analysis": {
-                "average_reasoning_length": metrics.average_reasoning_length
-            }
+            "reasoning_analysis": {"average_reasoning_length": metrics.average_reasoning_length},
         }
 
         return report
 
     def cleanup(self) -> None:
         """Clean up evaluation resources."""
-        if hasattr(self, 'debate_manager'):
+        if hasattr(self, "debate_manager"):
             self.debate_manager.cleanup()

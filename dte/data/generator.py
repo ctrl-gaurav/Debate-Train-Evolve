@@ -21,6 +21,7 @@ from ..debate.manager import DebateManager, DebateResult
 @dataclass
 class TrainingExample:
     """Structured training example generated from debate."""
+
     query: str
     answer: str
     reasoning: str
@@ -39,8 +40,7 @@ class DebateDataGenerator:
     into high-quality training examples.
     """
 
-    def __init__(self, config_datasets, config_debate, config_model,
-                 logger: Optional[DTELogger] = None):
+    def __init__(self, config_datasets, config_debate, config_model, logger: Optional[DTELogger] = None):
         """Initialize debate data generator.
 
         Args:
@@ -67,11 +67,12 @@ class DebateDataGenerator:
             "min_reasoning_length": 50,
             "max_reasoning_length": 1000,
             "require_consensus": True,
-            "filter_error_responses": True
+            "filter_error_responses": True,
         }
 
-    def generate_training_data(self, num_samples: int, evolution_round: int = 0,
-                             save_path: Optional[str] = None) -> List[TrainingExample]:
+    def generate_training_data(
+        self, num_samples: int, evolution_round: int = 0, save_path: Optional[str] = None
+    ) -> List[TrainingExample]:
         """Generate training data through multi-agent debates.
 
         Args:
@@ -112,9 +113,7 @@ class DebateDataGenerator:
                 self.debate_results.append(debate_result)
 
                 # Convert to training example
-                training_example = self._debate_to_training_example(
-                    debate_result, dataset_name, task_type
-                )
+                training_example = self._debate_to_training_example(debate_result, dataset_name, task_type)
 
                 # Apply quality filters
                 if self._passes_quality_filters(training_example, debate_result):
@@ -130,8 +129,10 @@ class DebateDataGenerator:
 
                 # Log progress every 50 examples
                 if (i + 1) % 50 == 0 and self.logger:
-                    self.logger.info(f"Progress: {i + 1}/{len(sampled_queries)} "
-                                   f"(Success: {successful_debates}, Filtered: {failed_debates})")
+                    self.logger.info(
+                        f"Progress: {i + 1}/{len(sampled_queries)} "
+                        f"(Success: {successful_debates}, Filtered: {failed_debates})"
+                    )
 
             except Exception as e:
                 failed_debates += 1
@@ -141,9 +142,11 @@ class DebateDataGenerator:
 
         if self.logger:
             self.logger.finish_progress("Generating debate data")
-            self.logger.info(f"Data generation completed. Generated: {len(generated_examples)}, "
-                           f"Success rate: {successful_debates}/{len(sampled_queries)} "
-                           f"({100*successful_debates/len(sampled_queries):.1f}%)")
+            self.logger.info(
+                f"Data generation completed. Generated: {len(generated_examples)}, "
+                f"Success rate: {successful_debates}/{len(sampled_queries)} "
+                f"({100 * successful_debates / len(sampled_queries):.1f}%)"
+            )
 
         # Store generated examples
         self.generated_examples.extend(generated_examples)
@@ -200,8 +203,7 @@ class DebateDataGenerator:
 
         return datasets
 
-    def _sample_queries(self, datasets: List[Tuple[Dataset, str, str]],
-                       num_samples: int) -> List[Tuple[str, str, str]]:
+    def _sample_queries(self, datasets: List[Tuple[Dataset, str, str]], num_samples: int) -> List[Tuple[str, str, str]]:
         """Sample queries from loaded datasets.
 
         Args:
@@ -276,8 +278,9 @@ class DebateDataGenerator:
                 self.logger.debug(f"Failed to extract query from {dataset_name}: {e}")
             return None
 
-    def _debate_to_training_example(self, debate_result: DebateResult,
-                                  dataset_name: str, task_type: str) -> TrainingExample:
+    def _debate_to_training_example(
+        self, debate_result: DebateResult, dataset_name: str, task_type: str
+    ) -> TrainingExample:
         """Convert debate result to training example.
 
         Args:
@@ -298,7 +301,7 @@ class DebateDataGenerator:
             "total_time": debate_result.metrics.get("total_time", 0),
             "sycophancy_rate": debate_result.metrics.get("sycophancy_rate", 0),
             "answer_progression": debate_result.extracted_answers,
-            "agent_count": len(debate_result.all_responses[0]) if debate_result.all_responses else 0
+            "agent_count": len(debate_result.all_responses[0]) if debate_result.all_responses else 0,
         }
 
         return TrainingExample(
@@ -309,11 +312,10 @@ class DebateDataGenerator:
             source_dataset=dataset_name,
             debate_rounds=debate_result.total_rounds,
             consensus_reached=debate_result.consensus_reached,
-            metadata=metadata
+            metadata=metadata,
         )
 
-    def _passes_quality_filters(self, example: TrainingExample,
-                              debate_result: DebateResult) -> bool:
+    def _passes_quality_filters(self, example: TrainingExample, debate_result: DebateResult) -> bool:
         """Apply quality filters to training example.
 
         Args:
@@ -324,13 +326,13 @@ class DebateDataGenerator:
             True if example passes all filters
         """
         # Filter error responses
-        if (self.quality_filters["filter_error_responses"] and
-            ("error" in example.answer.lower() or "failed" in example.answer.lower())):
+        if self.quality_filters["filter_error_responses"] and (
+            "error" in example.answer.lower() or "failed" in example.answer.lower()
+        ):
             return False
 
         # Require consensus if specified
-        if (self.quality_filters["require_consensus"] and
-            not example.consensus_reached):
+        if self.quality_filters["require_consensus"] and not example.consensus_reached:
             return False
 
         # Check confidence threshold
@@ -364,10 +366,10 @@ class DebateDataGenerator:
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Save as JSONL
-        with open(save_path, 'w', encoding='utf-8') as f:
+        with open(save_path, "w", encoding="utf-8") as f:
             for example in examples:
                 json.dump(asdict(example), f, ensure_ascii=False)
-                f.write('\n')
+                f.write("\n")
 
         if self.logger:
             self.logger.info(f"Saved {len(examples)} training examples to {save_path}")
@@ -386,7 +388,7 @@ class DebateDataGenerator:
             raise FileNotFoundError(f"Data file not found: {load_path}")
 
         examples = []
-        with open(load_path, 'r', encoding='utf-8') as f:
+        with open(load_path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -431,7 +433,7 @@ class DebateDataGenerator:
             "average_reasoning_length": avg_reasoning_length,
             "dataset_distribution": dataset_counts,
             "rounds_distribution": rounds_distribution,
-            "debate_statistics": self.debate_manager.get_debate_statistics()
+            "debate_statistics": self.debate_manager.get_debate_statistics(),
         }
 
     def update_quality_filters(self, new_filters: Dict[str, Any]) -> None:

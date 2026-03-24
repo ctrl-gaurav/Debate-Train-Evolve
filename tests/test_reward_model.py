@@ -14,6 +14,7 @@ def model():
 # 1. correctness_reward_func
 # -----------------------------------------------------------------------
 
+
 class TestCorrectnessReward:
     """Tests for the correctness reward function."""
 
@@ -40,6 +41,7 @@ class TestCorrectnessReward:
 # -----------------------------------------------------------------------
 # 2. int_reward_func
 # -----------------------------------------------------------------------
+
 
 class TestIntReward:
     """Tests for the integer/numeric reward function."""
@@ -73,6 +75,7 @@ class TestIntReward:
 # 3. strict_format_reward_func
 # -----------------------------------------------------------------------
 
+
 class TestStrictFormatReward:
     """Tests for strict XML format compliance."""
 
@@ -95,6 +98,7 @@ class TestStrictFormatReward:
 # -----------------------------------------------------------------------
 # 4. soft_format_reward_func
 # -----------------------------------------------------------------------
+
 
 class TestSoftFormatReward:
     """Tests for flexible XML format compliance."""
@@ -123,6 +127,7 @@ class TestSoftFormatReward:
 # -----------------------------------------------------------------------
 # 5. xmlcount_reward_func
 # -----------------------------------------------------------------------
+
 
 class TestXMLCountReward:
     """Tests for granular XML scoring."""
@@ -157,6 +162,7 @@ class TestXMLCountReward:
 # -----------------------------------------------------------------------
 # Combined reward calculations
 # -----------------------------------------------------------------------
+
 
 class TestCombineRewards:
     """Tests for combining multiple reward signals (weighted SUM)."""

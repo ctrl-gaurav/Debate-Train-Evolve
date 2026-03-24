@@ -27,8 +27,9 @@ class DTERewardModel:
         """Initialize the DTE reward model."""
         pass
 
-    def calculate_all_rewards(self, query: str, responses: List[str],
-                            ground_truth: Optional[str] = None) -> Dict[str, List[float]]:
+    def calculate_all_rewards(
+        self, query: str, responses: List[str], ground_truth: Optional[str] = None
+    ) -> Dict[str, List[float]]:
         """
         Calculate all 5 reward functions for a batch of responses.
 
@@ -77,8 +78,7 @@ class DTERewardModel:
             List of correctness rewards
         """
         extracted_responses = [self._extract_xml_answer(r) for r in responses]
-        return [2.0 if answers_match(r, ground_truth) else 0.0
-                for r in extracted_responses]
+        return [2.0 if answers_match(r, ground_truth) else 0.0 for r in extracted_responses]
 
     def int_reward_func(self, responses: List[str]) -> List[float]:
         """
@@ -216,15 +216,16 @@ class DTERewardModel:
         if match:
             answer = match.group(1).strip()
             # Clean up the answer
-            answer = re.sub(r'\n+', ' ', answer)  # Replace newlines with spaces
-            answer = re.sub(r'\s+', ' ', answer)  # Normalize whitespace
+            answer = re.sub(r"\n+", " ", answer)  # Replace newlines with spaces
+            answer = re.sub(r"\s+", " ", answer)  # Normalize whitespace
             return answer
 
         # Fall back to standard extraction
         return extract_final_answer(response)
 
-    def combine_rewards(self, rewards_dict: Dict[str, List[float]],
-                       weights: Optional[Dict[str, float]] = None) -> List[float]:
+    def combine_rewards(
+        self, rewards_dict: Dict[str, List[float]], weights: Optional[Dict[str, float]] = None
+    ) -> List[float]:
         """
         Combine multiple reward signals into a final reward using weighted SUM.
 
@@ -285,7 +286,7 @@ class DTERewardModel:
                     "mean": sum(rewards) / len(rewards),
                     "min": min(rewards),
                     "max": max(rewards),
-                    "std": (sum((r - sum(rewards)/len(rewards))**2 for r in rewards) / len(rewards))**0.5
+                    "std": (sum((r - sum(rewards) / len(rewards)) ** 2 for r in rewards) / len(rewards)) ** 0.5,
                 }
             else:
                 stats[reward_type] = {"mean": 0.0, "min": 0.0, "max": 0.0, "std": 0.0}

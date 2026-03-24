@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # Markers
 # ---------------------------------------------------------------------------
 
+
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line("markers", "gpu: marks tests that require a GPU")
@@ -24,6 +25,7 @@ def pytest_collection_modifyitems(config, items):
     """Skip GPU tests when no GPU is available."""
     try:
         import torch
+
         gpu_available = torch.cuda.is_available()
     except ImportError:
         gpu_available = False
@@ -39,10 +41,12 @@ def pytest_collection_modifyitems(config, items):
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def default_config():
     """Return a DTEConfig with default values."""
     from dte.core.config import DTEConfig
+
     return DTEConfig()
 
 
@@ -97,6 +101,7 @@ def sample_yaml_config(tmp_path):
 def reward_model():
     """Return an initialized DTERewardModel."""
     from dte.training.reward_model import DTERewardModel
+
     return DTERewardModel()
 
 
@@ -104,4 +109,5 @@ def reward_model():
 def prompt_manager():
     """Return an initialized DebatePromptManager."""
     from dte.debate.prompts import DebatePromptManager
+
     return DebatePromptManager()

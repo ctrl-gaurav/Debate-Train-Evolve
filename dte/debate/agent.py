@@ -24,6 +24,7 @@ from .prompts import DebatePromptManager, DebateResponse
 # Module-level model registry for weight sharing
 # ---------------------------------------------------------------------------
 
+
 class _ModelRegistry:
     """Thread-safe registry that caches loaded models for weight sharing.
 
@@ -122,6 +123,7 @@ _model_registry = _ModelRegistry()
 # DebateAgent
 # ---------------------------------------------------------------------------
 
+
 class DebateAgent:
     """Individual agent for multi-agent debate.
 
@@ -165,9 +167,7 @@ class DebateAgent:
         }
 
         # Acquire shared model
-        self.model, self.tokenizer = _model_registry.acquire(
-            self.model_name, self.device, self.model_config
-        )
+        self.model, self.tokenizer = _model_registry.acquire(self.model_name, self.device, self.model_config)
         self.generation_config["pad_token_id"] = self.tokenizer.pad_token_id
 
         # Agent state
@@ -201,9 +201,7 @@ class DebateAgent:
     # Response generation
     # ------------------------------------------------------------------
 
-    def generate_initial_response(
-        self, query: str, task_type: str = "math"
-    ) -> DebateResponse:
+    def generate_initial_response(self, query: str, task_type: str = "math") -> DebateResponse:
         """Generate the initial response for round 0.
 
         Args:
@@ -271,9 +269,7 @@ class DebateAgent:
 
         try:
             messages = [{"role": "user", "content": prompt}]
-            formatted_prompt = self.tokenizer.apply_chat_template(
-                messages, add_generation_prompt=True, tokenize=False
-            )
+            formatted_prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
 
             max_gen_length = self.generation_config.get("max_length", 2048)
             inputs = self.tokenizer(
@@ -295,9 +291,7 @@ class DebateAgent:
                 )
 
             generated_tokens = outputs.sequences[0][len(inputs["input_ids"][0]) :]
-            response_text = self.tokenizer.decode(
-                generated_tokens, skip_special_tokens=True
-            )
+            response_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
 
             generation_time = time.time() - start_time
             self.generation_times.append(generation_time)
@@ -351,12 +345,9 @@ class DebateAgent:
         return {
             "agent_id": self.agent_id,
             "total_generations": len(self.generation_times),
-            "avg_generation_time": sum(self.generation_times)
-            / len(self.generation_times),
+            "avg_generation_time": sum(self.generation_times) / len(self.generation_times),
             "total_generation_time": sum(self.generation_times),
-            "avg_tokens_generated": sum(self.token_counts) / len(self.token_counts)
-            if self.token_counts
-            else 0,
+            "avg_tokens_generated": sum(self.token_counts) / len(self.token_counts) if self.token_counts else 0,
             "total_tokens_generated": sum(self.token_counts),
             "model_name": self.model_name,
             "device": str(self.device),

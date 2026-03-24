@@ -78,9 +78,9 @@ class DatasetManager:
         self.loaded_datasets = {}
         self.cache_dir = cache_dir
 
-    def load_dataset_by_name(self, name: str, split: str = "train",
-                           max_samples: Optional[int] = None,
-                           force_reload: bool = False) -> Dataset:
+    def load_dataset_by_name(
+        self, name: str, split: str = "train", max_samples: Optional[int] = None, force_reload: bool = False
+    ) -> Dataset:
         """Load a dataset by name using HuggingFace datasets.
 
         Args:
@@ -111,18 +111,9 @@ class DatasetManager:
         try:
             # Load from HuggingFace
             if config["hf_config"]:
-                dataset = load_dataset(
-                    config["hf_name"],
-                    config["hf_config"],
-                    split=split,
-                    cache_dir=self.cache_dir
-                )
+                dataset = load_dataset(config["hf_name"], config["hf_config"], split=split, cache_dir=self.cache_dir)
             else:
-                dataset = load_dataset(
-                    config["hf_name"],
-                    split=split,
-                    cache_dir=self.cache_dir
-                )
+                dataset = load_dataset(config["hf_name"], split=split, cache_dir=self.cache_dir)
 
             # Limit samples if requested
             if max_samples is not None and max_samples > 0:
@@ -164,7 +155,7 @@ class DatasetManager:
                 "query": sample[config["question_field"]],
                 "ground_truth": sample[config["answer_field"]],
                 "task_type": config["task_type"],
-                "dataset_name": dataset_name
+                "dataset_name": dataset_name,
             }
 
             # Handle ARC-specific preprocessing (multiple choice)
@@ -230,12 +221,12 @@ class DatasetManager:
 
         # Load based on format
         if format == "json":
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             dataset = Dataset.from_list(data)
         elif format == "jsonl":
             data = []
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 for line in f:
                     if line.strip():
                         data.append(json.loads(line))
@@ -262,12 +253,12 @@ class DatasetManager:
 
         if format == "json":
             data = [sample for sample in dataset]
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         elif format == "jsonl":
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 for sample in dataset:
-                    f.write(json.dumps(sample, ensure_ascii=False) + '\n')
+                    f.write(json.dumps(sample, ensure_ascii=False) + "\n")
         elif format == "csv":
             dataset.to_csv(file_path)
         else:
@@ -338,5 +329,5 @@ class DatasetManager:
         return {
             "cached_datasets": list(self.loaded_datasets.keys()),
             "cache_size": len(self.loaded_datasets),
-            "memory_usage": sum(len(ds) for ds in self.loaded_datasets.values())
+            "memory_usage": sum(len(ds) for ds in self.loaded_datasets.values()),
         }

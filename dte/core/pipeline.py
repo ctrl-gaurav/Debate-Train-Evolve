@@ -22,6 +22,7 @@ from .logger import DTELogger
 @dataclass
 class EvolutionRoundResult:
     """Results from a single evolution round."""
+
     round_number: int
     data_generation_stats: Dict[str, Any]
     training_metrics: Dict[str, Any]
@@ -54,15 +55,9 @@ class DTEPipeline:
         self.logger = DTELogger(config.logging, config.experiment.name)
 
         # Initialize components
-        self.data_generator = DebateDataGenerator(
-            config.datasets, config.debate, config.model, self.logger
-        )
-        self.grpo_trainer = GRPOTrainer(
-            config.training, config.model, config.paths, self.logger
-        )
-        self.evaluator = DTEEvaluator(
-            config.datasets, config.debate, config.model, self.logger
-        )
+        self.data_generator = DebateDataGenerator(config.datasets, config.debate, config.model, self.logger)
+        self.grpo_trainer = GRPOTrainer(config.training, config.model, config.paths, self.logger)
+        self.evaluator = DTEEvaluator(config.datasets, config.debate, config.model, self.logger)
 
         # Pipeline state
         self.current_round = 0
@@ -136,7 +131,7 @@ class DTEPipeline:
             training_examples = self.data_generator.generate_training_data(
                 num_samples=self.config.evolution.samples_per_round,
                 evolution_round=round_num - 1,  # 0-indexed for temperature annealing
-                save_path=f"{self.config.paths.data_dir}/round_{round_num}_training_data.jsonl"
+                save_path=f"{self.config.paths.data_dir}/round_{round_num}_training_data.jsonl",
             )
             data_stats = self.data_generator.get_generation_statistics()
 
@@ -172,7 +167,7 @@ class DTEPipeline:
             training_metrics=training_metrics,
             evaluation_results=evaluation_results,
             performance_improvement=improvement,
-            total_time=round_time
+            total_time=round_time,
         )
 
         # Log round completion
@@ -192,7 +187,7 @@ class DTEPipeline:
         self.logger.info(f"Evaluating model performance for round {round_num}")
 
         # Run comprehensive evaluation
-        max_samples = getattr(self.config.datasets, 'max_samples_per_dataset', 100)
+        max_samples = getattr(self.config.datasets, "max_samples_per_dataset", 100)
         evaluation_metrics = self.evaluator.evaluate_model(round_num, max_samples)
 
         # Create evaluation report
@@ -213,7 +208,7 @@ class DTEPipeline:
             "average_reasoning_length": evaluation_metrics.average_reasoning_length,
             "evaluation_time": evaluation_metrics.evaluation_time,
             "per_dataset_metrics": evaluation_metrics.per_dataset_metrics,
-            "full_report": evaluation_report
+            "full_report": evaluation_report,
         }
 
         # Log key metrics
@@ -246,12 +241,13 @@ class DTEPipeline:
         if self.config.experiment.wandb.enabled:
             try:
                 import wandb
+
                 wandb.init(
                     project=self.config.experiment.wandb.project,
                     entity=self.config.experiment.wandb.entity,
                     name=self.config.experiment.name,
                     config=self.config.to_dict(),
-                    tags=self.config.experiment.tags
+                    tags=self.config.experiment.tags,
                 )
                 self.logger.info("Initialized Weights & Biases tracking")
             except ImportError:
@@ -271,16 +267,18 @@ class DTEPipeline:
             "total_time_hours": total_time / 3600,
             "total_evolution_rounds": len(self.evolution_results),
             "best_performance": self.best_performance,
-            "final_performance": self.evolution_results[-1].evaluation_results["overall_accuracy"] if self.evolution_results else 0.0,
+            "final_performance": self.evolution_results[-1].evaluation_results["overall_accuracy"]
+            if self.evolution_results
+            else 0.0,
             "total_improvement": self.best_performance - (self.base_model_performance or 0.0),
             "convergence_achieved": self.patience_counter >= self.config.evolution.patience,
             "evolution_rounds": [asdict(result) for result in self.evolution_results],
-            "config": self.config.to_dict()
+            "config": self.config.to_dict(),
         }
 
         # Save results
         results_path = Path(self.config.paths.output_dir) / f"{self.config.experiment.name}_results.json"
-        with open(results_path, 'w') as f:
+        with open(results_path, "w") as f:
             json.dump(final_results, f, indent=2, default=str)
 
         self.logger.info(f"Results saved to {results_path}")
@@ -296,6 +294,7 @@ class DTEPipeline:
             if self.config.experiment.wandb.enabled:
                 try:
                     import wandb
+
                     wandb.finish()
                 except Exception:
                     pass
@@ -325,7 +324,9 @@ class DTEPipeline:
             "best_performance": self.best_performance,
             "patience_counter": self.patience_counter,
             "total_rounds_completed": len(self.evolution_results),
-            "last_round_improvement": self.evolution_results[-1].performance_improvement if self.evolution_results else 0.0
+            "last_round_improvement": self.evolution_results[-1].performance_improvement
+            if self.evolution_results
+            else 0.0,
         }
 
     def save_checkpoint(self, checkpoint_path: str) -> None:
@@ -339,10 +340,10 @@ class DTEPipeline:
             "evolution_results": [asdict(result) for result in self.evolution_results],
             "best_performance": self.best_performance,
             "patience_counter": self.patience_counter,
-            "config": self.config.to_dict()
+            "config": self.config.to_dict(),
         }
 
-        with open(checkpoint_path, 'w') as f:
+        with open(checkpoint_path, "w") as f:
             json.dump(checkpoint_data, f, indent=2, default=str)
 
         self.logger.info(f"Pipeline checkpoint saved to {checkpoint_path}")
@@ -353,7 +354,7 @@ class DTEPipeline:
         Args:
             checkpoint_path: Path to load checkpoint from
         """
-        with open(checkpoint_path, 'r') as f:
+        with open(checkpoint_path, "r") as f:
             checkpoint_data = json.load(f)
 
         self.current_round = checkpoint_data["current_round"]
@@ -361,9 +362,7 @@ class DTEPipeline:
         self.patience_counter = checkpoint_data["patience_counter"]
 
         # Restore evolution results
-        self.evolution_results = [
-            EvolutionRoundResult(**result) for result in checkpoint_data["evolution_results"]
-        ]
+        self.evolution_results = [EvolutionRoundResult(**result) for result in checkpoint_data["evolution_results"]]
 
         self.logger.info(f"Pipeline checkpoint loaded from {checkpoint_path}")
 

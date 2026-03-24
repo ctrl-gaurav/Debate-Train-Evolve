@@ -16,14 +16,15 @@ Tests cover:
 """
 
 import os
+
 import pytest
 
 # Pin to GPU 0 before any CUDA initialization
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from dte.data.dataset_manager import DatasetManager
-from dte.data.processor import DataProcessor
 from dte.data.generator import TrainingExample
+from dte.data.processor import DataProcessor
 
 
 @pytest.mark.gpu
@@ -36,9 +37,7 @@ class TestGSM8KDataLoading:
 
     def test_load_gsm8k_train(self, dataset_manager):
         """Load a small slice of GSM8K train split from HuggingFace."""
-        dataset = dataset_manager.load_dataset_by_name(
-            "gsm8k", split="train", max_samples=5
-        )
+        dataset = dataset_manager.load_dataset_by_name("gsm8k", split="train", max_samples=5)
         assert len(dataset) == 5
         # GSM8K should have 'question' and 'answer' fields
         assert "question" in dataset.column_names
@@ -46,16 +45,12 @@ class TestGSM8KDataLoading:
 
     def test_load_gsm8k_test(self, dataset_manager):
         """Load a small slice of GSM8K test split."""
-        dataset = dataset_manager.load_dataset_by_name(
-            "gsm8k", split="test", max_samples=3
-        )
+        dataset = dataset_manager.load_dataset_by_name("gsm8k", split="test", max_samples=3)
         assert len(dataset) == 3
 
     def test_preprocess_gsm8k(self, dataset_manager):
         """Preprocessing GSM8K should extract question and clean answer."""
-        dataset = dataset_manager.load_dataset_by_name(
-            "gsm8k", split="train", max_samples=3
-        )
+        dataset = dataset_manager.load_dataset_by_name("gsm8k", split="train", max_samples=3)
         processed = dataset_manager.preprocess_dataset(dataset, "gsm8k")
 
         # Check that processed samples have standardized fields
@@ -74,9 +69,7 @@ class TestGSM8KDataLoading:
 
     def test_gsm8k_answer_cleaning(self, dataset_manager):
         """GSM8K answers in #### format should have the number extracted."""
-        dataset = dataset_manager.load_dataset_by_name(
-            "gsm8k", split="train", max_samples=10
-        )
+        dataset = dataset_manager.load_dataset_by_name("gsm8k", split="train", max_samples=10)
         processed = dataset_manager.preprocess_dataset(dataset, "gsm8k")
 
         for sample in processed:
@@ -95,16 +88,12 @@ class TestGSMPlusDataLoading:
 
     def test_load_gsm_plus(self, dataset_manager):
         """Load a small slice of GSM-Plus from HuggingFace."""
-        dataset = dataset_manager.load_dataset_by_name(
-            "gsm_plus", split="testmini", max_samples=5
-        )
+        dataset = dataset_manager.load_dataset_by_name("gsm_plus", split="testmini", max_samples=5)
         assert len(dataset) == 5
 
     def test_preprocess_gsm_plus(self, dataset_manager):
         """Preprocessing GSM-Plus should extract question and answer."""
-        dataset = dataset_manager.load_dataset_by_name(
-            "gsm_plus", split="testmini", max_samples=3
-        )
+        dataset = dataset_manager.load_dataset_by_name("gsm_plus", split="testmini", max_samples=3)
         processed = dataset_manager.preprocess_dataset(dataset, "gsm_plus")
 
         sample = processed[0]
@@ -115,9 +104,7 @@ class TestGSMPlusDataLoading:
 
     def test_gsm_plus_has_answer(self, dataset_manager):
         """GSM-Plus ground truth should be non-empty."""
-        dataset = dataset_manager.load_dataset_by_name(
-            "gsm_plus", split="testmini", max_samples=5
-        )
+        dataset = dataset_manager.load_dataset_by_name("gsm_plus", split="testmini", max_samples=5)
         processed = dataset_manager.preprocess_dataset(dataset, "gsm_plus")
 
         for sample in processed:
@@ -156,12 +143,8 @@ class TestDatasetManagerUtilities:
 
     def test_cache_works(self, dataset_manager):
         """Loading the same dataset twice should use cache."""
-        ds1 = dataset_manager.load_dataset_by_name(
-            "gsm8k", split="train", max_samples=3
-        )
-        ds2 = dataset_manager.load_dataset_by_name(
-            "gsm8k", split="train", max_samples=3
-        )
+        ds1 = dataset_manager.load_dataset_by_name("gsm8k", split="train", max_samples=3)
+        ds2 = dataset_manager.load_dataset_by_name("gsm8k", split="train", max_samples=3)
         # Same object from cache
         assert ds1 is ds2
 

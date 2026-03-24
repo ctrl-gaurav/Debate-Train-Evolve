@@ -26,7 +26,7 @@ def extract_final_answer(response: str) -> str:
         r"\\boxed\{([^}]+)\}",
         r"\*\*Final Answer\*\*:.*?([$\£€]?[\d,]+(?:\.\d+)?(?:[ million| thousand|%])?)",
         r"(\d{1,3}(?:,\d{3})+(?:\.\d+)?)",
-        r"(\d+\.?\d*)"
+        r"(\d+\.?\d*)",
     ]
 
     for pattern in patterns:
@@ -38,19 +38,19 @@ def extract_final_answer(response: str) -> str:
                 cleaned = raw_answer.replace(",", "").replace("$", "").replace("£", "").replace("€", "")
 
                 # Handle LaTeX formatting
-                cleaned = re.sub(r'\\text\{[^}]*\}', '', cleaned).strip()
+                cleaned = re.sub(r"\\text\{[^}]*\}", "", cleaned).strip()
 
                 if "%" in raw_answer:
                     cleaned = cleaned.replace("%", "")
 
                 # Extract numeric value before "million" or "thousand"
                 if "million" in raw_answer.lower():
-                    num_match = re.search(r'(\d+\.?\d*)', cleaned)
+                    num_match = re.search(r"(\d+\.?\d*)", cleaned)
                     if num_match:
                         cleaned = num_match.group(1)
                         cleaned = str(int(float(cleaned) * 1_000_000))
                 elif "thousand" in raw_answer.lower():
-                    num_match = re.search(r'(\d+\.?\d*)', cleaned)
+                    num_match = re.search(r"(\d+\.?\d*)", cleaned)
                     if num_match:
                         cleaned = num_match.group(1)
                         cleaned = str(int(float(cleaned) * 1_000))
@@ -203,7 +203,7 @@ def extract_arc_answer(response: str) -> str:
         r"(?:answer|choice)(?:\s+is)?\s*:?\s*([A-D])",
         r"(?:^|\s)([A-D])(?:\s|$|\.|,)",
         r"\\boxed\{([A-D])\}",
-        r"\(([A-D])\)"
+        r"\(([A-D])\)",
     ]
 
     for pattern in patterns:
@@ -214,8 +214,7 @@ def extract_arc_answer(response: str) -> str:
     return "Unable to Extract"
 
 
-def calculate_accuracy(predictions: List[str], ground_truths: List[str],
-                      task_type: str = "math") -> float:
+def calculate_accuracy(predictions: List[str], ground_truths: List[str], task_type: str = "math") -> float:
     """
     Calculate accuracy for predictions vs ground truth.
 
@@ -244,8 +243,7 @@ def calculate_accuracy(predictions: List[str], ground_truths: List[str],
     return correct / total if total > 0 else 0.0
 
 
-def consolidate_reasoning_traces(all_responses: List[List[str]],
-                               final_answer: str) -> str:
+def consolidate_reasoning_traces(all_responses: List[List[str]], final_answer: str) -> str:
     """
     Extract consolidated reasoning from debate traces.
 
@@ -289,15 +287,15 @@ def consolidate_reasoning_traces(all_responses: List[List[str]],
 def _extract_reasoning_steps(response: str) -> List[str]:
     """Extract individual reasoning steps from response text."""
     # Split by common sentence endings and step indicators
-    sentences = re.split(r'[.!?]+|\n+|Step \d+[:.]?|\d+[\.)]\s*', response)
+    sentences = re.split(r"[.!?]+|\n+|Step \d+[:.]?|\d+[\.)]\s*", response)
     steps = []
 
     for sentence in sentences:
         sentence = sentence.strip()
         if len(sentence) > 15:  # Filter very short sentences
             # Clean up common artifacts
-            sentence = re.sub(r'^[•\-\*\s]+', '', sentence)
-            sentence = re.sub(r'\s+', ' ', sentence)
+            sentence = re.sub(r"^[•\-\*\s]+", "", sentence)
+            sentence = re.sub(r"\s+", " ", sentence)
             if sentence:
                 steps.append(sentence)
 
@@ -308,12 +306,12 @@ def _is_novel_manipulation(step: str) -> bool:
     """Check if a reasoning step introduces novel symbolic manipulations."""
     # Look for mathematical operations, equations, symbolic reasoning
     novel_indicators = [
-        r'\d+\s*[+\-\*/=]\s*\d+',  # Mathematical operations
-        r'[a-zA-Z]\s*=\s*',        # Variable assignments
-        r'\\frac\{[^}]+\}\{[^}]+\}',  # Fractions
-        r'therefore|thus|hence|consequently|implies',  # Logical connectors
-        r'let\s+[a-zA-Z]|assume|suppose',  # Assumptions
-        r'\$.*\$',  # LaTeX math
+        r"\d+\s*[+\-\*/=]\s*\d+",  # Mathematical operations
+        r"[a-zA-Z]\s*=\s*",  # Variable assignments
+        r"\\frac\{[^}]+\}\{[^}]+\}",  # Fractions
+        r"therefore|thus|hence|consequently|implies",  # Logical connectors
+        r"let\s+[a-zA-Z]|assume|suppose",  # Assumptions
+        r"\$.*\$",  # LaTeX math
     ]
 
     step_lower = step.lower()

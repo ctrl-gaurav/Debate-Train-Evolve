@@ -98,10 +98,7 @@ class TrainingDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         example = self.examples[idx]
         query = example.query
-        response = (
-            f"<reasoning>\n{example.reasoning}\n</reasoning>\n"
-            f"<answer>\n{example.answer}\n</answer>\n"
-        )
+        response = f"<reasoning>\n{example.reasoning}\n</reasoning>\n<answer>\n{example.answer}\n</answer>\n"
         answer = example.answer
 
         return {
@@ -199,17 +196,13 @@ class GRPOTrainer:
             self.logger.info(f"Loading model: {model_name}")
 
         # Tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name, trust_remote_code=True
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         # Model kwargs
         model_kwargs = {
-            "torch_dtype": torch.bfloat16
-            if self.device.type == "cuda"
-            else torch.float32,
+            "torch_dtype": torch.bfloat16 if self.device.type == "cuda" else torch.float32,
             "device_map": "auto" if self.device.type == "cuda" else None,
             "trust_remote_code": True,
         }
@@ -231,14 +224,10 @@ class GRPOTrainer:
                 self.logger.info(f"Applied LoRA: rank={self.config.lora.rank}")
         elif self.config.lora.enabled and not PEFT_AVAILABLE:
             if self.logger:
-                self.logger.warning(
-                    "LoRA requested but PEFT not available. Training without LoRA."
-                )
+                self.logger.warning("LoRA requested but PEFT not available. Training without LoRA.")
 
         # Reference model (frozen)
-        self.reference_model = AutoModelForCausalLM.from_pretrained(
-            model_name, **model_kwargs
-        )
+        self.reference_model = AutoModelForCausalLM.from_pretrained(model_name, **model_kwargs)
         self.reference_model.eval()
         for param in self.reference_model.parameters():
             param.requires_grad = False
@@ -269,14 +258,10 @@ class GRPOTrainer:
         """
         if self.logger:
             with self.logger.component_context("grpo_training"):
-                self.logger.info(
-                    f"Starting GRPO training with {len(training_examples)} examples"
-                )
+                self.logger.info(f"Starting GRPO training with {len(training_examples)} examples")
 
         # Build dataset and dataloader
-        train_dataset = TrainingDataset(
-            training_examples, self.tokenizer, self.model_config.max_length
-        )
+        train_dataset = TrainingDataset(training_examples, self.tokenizer, self.model_config.max_length)
         train_dataloader = DataLoader(
             train_dataset,
             batch_size=self.batch_size,
@@ -293,10 +278,7 @@ class GRPOTrainer:
 
         if self.logger:
             self.logger.info("GRPO training completed")
-            if (
-                "reward_stats" in training_metrics
-                and training_metrics["reward_stats"]
-            ):
+            if "reward_stats" in training_metrics and training_metrics["reward_stats"]:
                 final_rewards = training_metrics["reward_stats"][-1]
                 self.logger.info(f"Final reward stats: {final_rewards}")
 
@@ -306,9 +288,7 @@ class GRPOTrainer:
     # Optimizer setup
     # ------------------------------------------------------------------
 
-    def _setup_optimizer_and_scheduler(
-        self, num_training_steps_per_epoch: int
-    ) -> None:
+    def _setup_optimizer_and_scheduler(self, num_training_steps_per_epoch: int) -> None:
         """Create optimizer (8-bit AdamW if available) and LR scheduler.
 
         The DTE paper specifies 8-bit AdamW with betas (0.9, 0.99). When
@@ -348,10 +328,7 @@ class GRPOTrainer:
         )
 
         if self.logger:
-            self.logger.info(
-                f"Optimizer: {optimizer_label}, LR: {self.learning_rate}, "
-                f"Steps: {total_steps}"
-            )
+            self.logger.info(f"Optimizer: {optimizer_label}, LR: {self.learning_rate}, Steps: {total_steps}")
 
     # ------------------------------------------------------------------
     # Training loop
@@ -405,13 +382,9 @@ class GRPOTrainer:
                 num_batches += 1
 
                 training_metrics["step_losses"].append(step_loss)
-                training_metrics["learning_rates"].append(
-                    self.scheduler.get_last_lr()[0]
-                )
+                training_metrics["learning_rates"].append(self.scheduler.get_last_lr()[0])
                 training_metrics["kl_divergences"].append(metrics["avg_kl_div"])
-                training_metrics["advantages_stats"].append(
-                    metrics["advantages_stats"]
-                )
+                training_metrics["advantages_stats"].append(metrics["advantages_stats"])
 
                 if "reward_stats" in metrics:
                     if "reward_stats" not in training_metrics:
@@ -437,9 +410,7 @@ class GRPOTrainer:
 
             if self.logger:
                 self.logger.update_progress("GRPO Training", advance=1)
-                self.logger.info(
-                    f"Epoch {epoch + 1}/{self.max_epochs} - Loss: {avg_epoch_loss:.4f}"
-                )
+                self.logger.info(f"Epoch {epoch + 1}/{self.max_epochs} - Loss: {avg_epoch_loss:.4f}")
 
             # Checkpoint on improvement
             if avg_epoch_loss < self.best_loss:
@@ -473,10 +444,7 @@ class GRPOTrainer:
                 elif "answer" in batch and i < len(batch["answer"]):
                     ground_truth = batch["answer"][i]
 
-                rewards = [
-                    self._calculate_reward(query, response, ground_truth)
-                    for response in responses
-                ]
+                rewards = [self._calculate_reward(query, response, ground_truth) for response in responses]
                 advantages = self._calculate_advantages(rewards)
 
                 all_responses.append(responses)
@@ -529,9 +497,7 @@ class GRPOTrainer:
     # Reward calculation
     # ------------------------------------------------------------------
 
-    def _calculate_reward(
-        self, query: str, response: str, ground_truth: Optional[str] = None
-    ) -> float:
+    def _calculate_reward(self, query: str, response: str, ground_truth: Optional[str] = None) -> float:
         """Compute the combined DTE reward for a (query, response) pair.
 
         Uses all 5 DTE reward functions and returns a **weighted sum** (not
@@ -621,9 +587,7 @@ class GRPOTrainer:
     # GRPO loss (per-token log-probability ratios)
     # ------------------------------------------------------------------
 
-    def _compute_grpo_loss(
-        self, grpo_batch: GRPOBatch
-    ) -> Tuple[torch.Tensor, Dict[str, Any]]:
+    def _compute_grpo_loss(self, grpo_batch: GRPOBatch) -> Tuple[torch.Tensor, Dict[str, Any]]:
         """Compute GRPO loss with proper per-token log-probability ratios.
 
         For each (query, response) pair the loss is:
@@ -688,12 +652,8 @@ class GRPOTrainer:
 
                 # Gather the log-prob assigned to the actual next token
                 # Result shape: (1, seq_len-1)
-                current_token_lp = shift_log_probs.gather(
-                    2, target_ids.unsqueeze(-1)
-                ).squeeze(-1)
-                ref_token_lp = shift_ref_log_probs.gather(
-                    2, target_ids.unsqueeze(-1)
-                ).squeeze(-1)
+                current_token_lp = shift_log_probs.gather(2, target_ids.unsqueeze(-1)).squeeze(-1)
+                ref_token_lp = shift_ref_log_probs.gather(2, target_ids.unsqueeze(-1)).squeeze(-1)
 
                 # Per-token log-ratio, then average over response tokens
                 token_log_ratio = current_token_lp - ref_token_lp  # (1, seq_len-1)
@@ -703,15 +663,9 @@ class GRPOTrainer:
                 ratio = torch.exp(avg_log_ratio.clamp(-10.0, 10.0))
 
                 # ---- Clipped surrogate loss ----
-                advantage_t = torch.tensor(
-                    advantage, dtype=torch.float32, device=self.device
-                )
-                clipped_ratio = torch.clamp(
-                    ratio, 1.0 - self.clip_ratio, 1.0 + self.clip_ratio
-                )
-                policy_loss = -torch.min(
-                    ratio * advantage_t, clipped_ratio * advantage_t
-                )
+                advantage_t = torch.tensor(advantage, dtype=torch.float32, device=self.device)
+                clipped_ratio = torch.clamp(ratio, 1.0 - self.clip_ratio, 1.0 + self.clip_ratio)
+                policy_loss = -torch.min(ratio * advantage_t, clipped_ratio * advantage_t)
 
                 # ---- KL divergence (per-token, averaged) ----
                 # KL(pi || pi_ref) approx = mean of (log_pi - log_pi_ref)
@@ -759,6 +713,7 @@ class GRPOTrainer:
         checkpoint_dir = f"{self.paths_config.models_dir}/checkpoint_epoch_{epoch}"
 
         import os
+
         os.makedirs(checkpoint_dir, exist_ok=True)
 
         if hasattr(self.model, "save_pretrained"):
@@ -778,9 +733,7 @@ class GRPOTrainer:
         torch.save(training_state, f"{checkpoint_dir}/training_state.pt")
 
         if self.logger:
-            self.logger.log_model_checkpoint(
-                checkpoint_dir, {"loss": loss, "epoch": epoch}
-            )
+            self.logger.log_model_checkpoint(checkpoint_dir, {"loss": loss, "epoch": epoch})
 
     # ------------------------------------------------------------------
     # Cleanup

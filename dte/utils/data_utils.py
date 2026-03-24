@@ -16,7 +16,7 @@ def load_jsonl(file_path: str) -> List[Dict[str, Any]]:
         List of JSON objects
     """
     data = []
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
@@ -33,15 +33,20 @@ def save_jsonl(data: List[Dict[str, Any]], file_path: str) -> None:
     """
     Path(file_path).parent.mkdir(parents=True, exist_ok=True)
 
-    with open(file_path, 'w', encoding='utf-8') as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         for item in data:
             json.dump(item, f, ensure_ascii=False)
-            f.write('\n')
+            f.write("\n")
 
 
-def split_dataset(data: List[Any], train_ratio: float = 0.8,
-                 val_ratio: float = 0.1, test_ratio: float = 0.1,
-                 shuffle: bool = True, seed: int = 42) -> Tuple[List[Any], List[Any], List[Any]]:
+def split_dataset(
+    data: List[Any],
+    train_ratio: float = 0.8,
+    val_ratio: float = 0.1,
+    test_ratio: float = 0.1,
+    shuffle: bool = True,
+    seed: int = 42,
+) -> Tuple[List[Any], List[Any], List[Any]]:
     """Split dataset into train, validation, and test sets.
 
     Args:
@@ -55,8 +60,7 @@ def split_dataset(data: List[Any], train_ratio: float = 0.8,
     Returns:
         Tuple of (train_data, val_data, test_data)
     """
-    assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, \
-        "Ratios must sum to 1.0"
+    assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, "Ratios must sum to 1.0"
 
     if shuffle:
         random.seed(seed)
@@ -74,8 +78,9 @@ def split_dataset(data: List[Any], train_ratio: float = 0.8,
     return train_data, val_data, test_data
 
 
-def filter_by_length(data: List[Dict[str, Any]], min_length: int = 10,
-                    max_length: int = 1000, text_key: str = "text") -> List[Dict[str, Any]]:
+def filter_by_length(
+    data: List[Dict[str, Any]], min_length: int = 10, max_length: int = 1000, text_key: str = "text"
+) -> List[Dict[str, Any]]:
     """Filter data by text length.
 
     Args:
@@ -122,8 +127,7 @@ def deduplicate_data(data: List[Dict[str, Any]], key: str = "text") -> List[Dict
     return deduplicated
 
 
-def sample_balanced(data: List[Dict[str, Any]], label_key: str,
-                   samples_per_class: int) -> List[Dict[str, Any]]:
+def sample_balanced(data: List[Dict[str, Any]], label_key: str, samples_per_class: int) -> List[Dict[str, Any]]:
     """Sample balanced data across different classes.
 
     Args:
@@ -182,8 +186,7 @@ def validate_data_format(data: List[Dict[str, Any]], required_keys: List[str]) -
     return errors
 
 
-def merge_datasets(datasets: List[List[Dict[str, Any]]],
-                  add_source_info: bool = True) -> List[Dict[str, Any]]:
+def merge_datasets(datasets: List[List[Dict[str, Any]]], add_source_info: bool = True) -> List[Dict[str, Any]]:
     """Merge multiple datasets into one.
 
     Args:
@@ -199,7 +202,7 @@ def merge_datasets(datasets: List[List[Dict[str, Any]]],
         for item in dataset:
             if add_source_info:
                 item = item.copy()  # Don't modify original
-                item['source_dataset_idx'] = i
+                item["source_dataset_idx"] = i
             merged.append(item)
 
     return merged

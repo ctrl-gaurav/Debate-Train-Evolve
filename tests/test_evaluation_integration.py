@@ -13,12 +13,13 @@ Tests cover:
 """
 
 import os
+
 import pytest
 
 # Pin to GPU 5 before any CUDA initialization
 os.environ["CUDA_VISIBLE_DEVICES"] = "5"
 
-from dte.core.config import ModelConfig, DebateConfig, DatasetsConfig
+from dte.core.config import DatasetsConfig, DebateConfig, ModelConfig
 from dte.core.evaluator import DTEEvaluator, EvaluationMetrics
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
@@ -48,9 +49,7 @@ class TestEvaluationIntegration:
 
     def test_evaluation_returns_metrics(self, evaluator):
         """evaluate_model should return an EvaluationMetrics instance."""
-        metrics = evaluator.evaluate_model(
-            evolution_round=0, max_samples_per_dataset=3
-        )
+        metrics = evaluator.evaluate_model(evolution_round=0, max_samples_per_dataset=3)
         assert isinstance(metrics, EvaluationMetrics)
         assert metrics.total_samples > 0
         assert 0.0 <= metrics.overall_accuracy <= 1.0
@@ -59,9 +58,7 @@ class TestEvaluationIntegration:
 
     def test_evaluation_report(self, evaluator):
         """create_evaluation_report should return a well-structured dict."""
-        metrics = evaluator.evaluate_model(
-            evolution_round=0, max_samples_per_dataset=2
-        )
+        metrics = evaluator.evaluate_model(evolution_round=0, max_samples_per_dataset=2)
         report = evaluator.create_evaluation_report(metrics, evolution_round=0)
         assert "overall_metrics" in report
         assert "per_dataset_metrics" in report
@@ -94,9 +91,7 @@ class TestMultiDatasetEvaluation:
 
     def test_multi_dataset_returns_per_dataset_metrics(self, multi_evaluator):
         """Evaluation on multiple datasets should return per-dataset metrics."""
-        metrics = multi_evaluator.evaluate_model(
-            evolution_round=0, max_samples_per_dataset=2
-        )
+        metrics = multi_evaluator.evaluate_model(evolution_round=0, max_samples_per_dataset=2)
 
         assert isinstance(metrics, EvaluationMetrics)
         assert metrics.total_samples > 0
@@ -106,17 +101,19 @@ class TestMultiDatasetEvaluation:
 
     def test_multi_dataset_report_completeness(self, multi_evaluator):
         """Report from multi-dataset evaluation should have all keys."""
-        metrics = multi_evaluator.evaluate_model(
-            evolution_round=0, max_samples_per_dataset=2
-        )
+        metrics = multi_evaluator.evaluate_model(evolution_round=0, max_samples_per_dataset=2)
         report = multi_evaluator.create_evaluation_report(metrics, evolution_round=0)
 
         # Check overall metrics structure
         overall = report["overall_metrics"]
         expected_keys = [
-            "accuracy", "total_samples", "correct_samples",
-            "consensus_rate", "debate_helped_rate",
-            "average_debate_rounds", "sycophancy_rate",
+            "accuracy",
+            "total_samples",
+            "correct_samples",
+            "consensus_rate",
+            "debate_helped_rate",
+            "average_debate_rounds",
+            "sycophancy_rate",
             "evaluation_time",
         ]
         for key in expected_keys:
@@ -188,15 +185,11 @@ class TestAnswerCorrectness:
         """Run a real debate and check that correctness evaluation works."""
         from dte.debate.manager import DebateManager
 
-        manager = DebateManager(
-            evaluator.debate_config, evaluator.model_config, logger=None
-        )
+        manager = DebateManager(evaluator.debate_config, evaluator.model_config, logger=None)
         try:
             result = manager.conduct_debate("What is 2 + 2?", task_type="math")
             # Just verify the function does not crash on real output
-            is_correct = evaluator._check_answer_correctness(
-                result.final_answer, "4", "math"
-            )
+            is_correct = evaluator._check_answer_correctness(result.final_answer, "4", "math")
             assert isinstance(is_correct, bool)
         finally:
             manager.cleanup()

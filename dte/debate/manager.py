@@ -20,6 +20,7 @@ from .prompts import DebatePromptManager, DebateResponse
 @dataclass
 class DebateResult:
     """Result of a complete debate session."""
+
     query: str
     final_answer: str
     consensus_reached: bool
@@ -83,31 +84,31 @@ class DebateManager:
                 agent = DebateAgent(
                     agent_id=str(i + 1),  # Use 1-indexed agent IDs like original
                     model_name=model_name,
-                    device=getattr(self.model_config, 'device', 'auto'),
+                    device=getattr(self.model_config, "device", "auto"),
                     model_config=self.model_config.__dict__,
                     generation_config={
                         "max_length": self.model_config.max_length,
                         "temperature": self.model_config.temperature,
                         "top_p": self.model_config.top_p,
                         "top_k": self.model_config.top_k,
-                    }
+                    },
                 )
                 self.agents.append(agent)
         else:
             # Use same model for all agents (default)
-            base_model = getattr(self.model_config, 'base_model_name', 'Qwen/Qwen2.5-1.5B-Instruct')
+            base_model = getattr(self.model_config, "base_model_name", "Qwen/Qwen2.5-1.5B-Instruct")
             for i in range(self.num_agents):
                 agent = DebateAgent(
                     agent_id=str(i + 1),  # Use 1-indexed agent IDs like original
                     model_name=base_model,
-                    device=getattr(self.model_config, 'device', 'auto'),
+                    device=getattr(self.model_config, "device", "auto"),
                     model_config=self.model_config.__dict__,
                     generation_config={
                         "max_length": self.model_config.max_length,
                         "temperature": self.model_config.temperature,
                         "top_p": self.model_config.top_p,
                         "top_k": self.model_config.top_k,
-                    }
+                    },
                 )
                 self.agents.append(agent)
 
@@ -183,9 +184,7 @@ class DebateManager:
                         answers_so_far[agent_id] = agent.response_history[-1].reasoning
 
                 # Conduct debate round
-                round_responses = self._conduct_debate_round(
-                    query, answers_so_far, round_num, task_type
-                )
+                round_responses = self._conduct_debate_round(query, answers_so_far, round_num, task_type)
                 all_responses.append(round_responses)
 
                 # Extract answers and update history
@@ -226,8 +225,7 @@ class DebateManager:
 
         # Calculate metrics
         metrics = self._calculate_debate_metrics(
-            all_responses, extracted_answers, agent_answer_history,
-            sycophancy_history, time.time() - start_time
+            all_responses, extracted_answers, agent_answer_history, sycophancy_history, time.time() - start_time
         )
 
         # Extract consolidated reasoning
@@ -248,7 +246,7 @@ class DebateManager:
             confidence_progression=confidence_progression,
             metrics=metrics,
             consolidated_reasoning=consolidated_reasoning,
-            task_type=task_type
+            task_type=task_type,
         )
 
         # Store in history
@@ -259,7 +257,7 @@ class DebateManager:
                 round_num=total_rounds,
                 agents_responses=[r.__dict__ for r in all_responses[-1]],
                 consensus_reached=consensus_reached,
-                final_answer=final_answer
+                final_answer=final_answer,
             )
 
         return result
@@ -281,24 +279,22 @@ class DebateManager:
                     reasoning="Failed to generate response",
                     extracted_answer="Unable to Extract",
                     round_number=0,
-                    agent_id=agent.agent_id
+                    agent_id=agent.agent_id,
                 )
                 responses.append(fallback_response)
 
         return responses
 
-    def _conduct_debate_round(self, query: str, answers_so_far: Dict[str, str],
-                            round_num: int, task_type: str) -> List[DebateResponse]:
+    def _conduct_debate_round(
+        self, query: str, answers_so_far: Dict[str, str], round_num: int, task_type: str
+    ) -> List[DebateResponse]:
         """Conduct a single debate round with structured prompting."""
         responses = []
 
         for agent in self.agents:
             try:
                 response = agent.generate_debate_response(
-                    query=query,
-                    answers_so_far=answers_so_far,
-                    round_num=round_num,
-                    task_type=task_type
+                    query=query, answers_so_far=answers_so_far, round_num=round_num, task_type=task_type
                 )
                 responses.append(response)
 
@@ -315,7 +311,7 @@ class DebateManager:
                         reasoning="Failed to generate response",
                         extracted_answer="Unable to Extract",
                         round_number=round_num,
-                        agent_id=agent.agent_id
+                        agent_id=agent.agent_id,
                     )
                 responses.append(fallback_response)
 
@@ -333,22 +329,26 @@ class DebateManager:
 
         # Count answer frequencies
         from collections import Counter
+
         answer_counts = Counter(valid_answers)
         most_common_answer, _ = answer_counts.most_common(1)[0]
 
         return most_common_answer
 
-    def _calculate_debate_metrics(self, all_responses: List[List[DebateResponse]],
-                                extracted_answers: List[List[str]],
-                                agent_answer_history: Dict[str, List[str]],
-                                sycophancy_history: List[Dict[str, bool]],
-                                total_time: float) -> Dict[str, Any]:
+    def _calculate_debate_metrics(
+        self,
+        all_responses: List[List[DebateResponse]],
+        extracted_answers: List[List[str]],
+        agent_answer_history: Dict[str, List[str]],
+        sycophancy_history: List[Dict[str, bool]],
+        total_time: float,
+    ) -> Dict[str, Any]:
         """Calculate comprehensive metrics for the debate."""
         metrics = {
             "total_time": total_time,
             "total_rounds": len(all_responses) - 1,  # Exclude round 0
             "consensus_reached": len(set(extracted_answers[-1])) <= 1,
-            "num_agents": len(self.agents)
+            "num_agents": len(self.agents),
         }
 
         # Calculate sycophancy rate
@@ -359,7 +359,7 @@ class DebateManager:
             total_sycophancy_instances += sum(round_sycophancy.values())
             total_possible_instances += len(round_sycophancy)
 
-        metrics["sycophancy_rate"] = (total_sycophancy_instances / max(total_possible_instances, 1))
+        metrics["sycophancy_rate"] = total_sycophancy_instances / max(total_possible_instances, 1)
 
         # Calculate answer stability (how often agents stick to their answers)
         answer_changes = 0
@@ -368,7 +368,7 @@ class DebateManager:
         for agent_id, answers in agent_answer_history.items():
             for i in range(1, len(answers)):
                 total_transitions += 1
-                if answers[i] != answers[i-1]:
+                if answers[i] != answers[i - 1]:
                     answer_changes += 1
 
         metrics["answer_change_rate"] = answer_changes / max(total_transitions, 1)
@@ -390,6 +390,7 @@ class DebateManager:
         valid_final_answers = [a for a in final_answers if a != "Unable to Extract"]
         if valid_final_answers:
             from collections import Counter
+
             answer_counts = Counter(valid_final_answers)
             most_common_count = answer_counts.most_common(1)[0][1]
             metrics["final_answer_agreement"] = most_common_count / len(valid_final_answers)
@@ -420,8 +421,9 @@ class DebateManager:
             "average_rounds": avg_rounds,
             "average_time_seconds": avg_time,
             "sycophancy_rate": sum(d.metrics["sycophancy_rate"] for d in self.debate_history) / total_debates,
-            "average_reasoning_length": sum(d.metrics["average_reasoning_length"] for d in self.debate_history) / total_debates,
-            "answer_change_rate": sum(d.metrics["answer_change_rate"] for d in self.debate_history) / total_debates
+            "average_reasoning_length": sum(d.metrics["average_reasoning_length"] for d in self.debate_history)
+            / total_debates,
+            "answer_change_rate": sum(d.metrics["answer_change_rate"] for d in self.debate_history) / total_debates,
         }
 
     def update_evolution_round(self, evolution_round: int) -> None:
@@ -444,7 +446,8 @@ class DebateManager:
         if ta_cfg.enabled:
             # Parse minimum model size from config (e.g. "3B" -> 3.0)
             from ..utils.helpers import calculate_model_size
-            model_name = getattr(self.model_config, 'base_model_name', '')
+
+            model_name = getattr(self.model_config, "base_model_name", "")
             model_size = calculate_model_size(model_name)
 
             min_size_str = ta_cfg.min_model_size.upper().replace("B", "")
@@ -459,15 +462,13 @@ class DebateManager:
                 # (max_evolution_rounds is not stored here; infer from calling
                 #  code by using the max of evolution_round seen so far)
                 max_rounds = max(
-                    getattr(self, '_max_evolution_rounds', 3),
+                    getattr(self, "_max_evolution_rounds", 3),
                     evolution_round + 1,
                 )
                 self._max_evolution_rounds = max_rounds
 
                 progress = evolution_round / max(max_rounds - 1, 1)
-                annealed_temp = ta_cfg.start_temp + progress * (
-                    ta_cfg.end_temp - ta_cfg.start_temp
-                )
+                annealed_temp = ta_cfg.start_temp + progress * (ta_cfg.end_temp - ta_cfg.start_temp)
                 annealed_temp = max(ta_cfg.end_temp, min(ta_cfg.start_temp, annealed_temp))
 
                 if self.logger:

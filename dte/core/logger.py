@@ -25,6 +25,7 @@ from rich.table import Table
 @dataclass
 class LogEntry:
     """Structured log entry for DTE operations."""
+
     timestamp: float
     level: str
     message: str
@@ -87,19 +88,14 @@ class DTELogger:
 
         # File handler for structured logs
         log_file = self.log_dir / f"{self.experiment_name}.jsonl"
-        file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+        file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
         file_handler.setLevel(logging.DEBUG)
-        file_formatter = logging.Formatter('%(message)s')
+        file_formatter = logging.Formatter("%(message)s")
         file_handler.setFormatter(file_formatter)
         self.logger.addHandler(file_handler)
 
         # Rich console handler
-        console_handler = RichHandler(
-            console=self.console,
-            show_time=True,
-            show_path=False,
-            rich_tracebacks=True
-        )
+        console_handler = RichHandler(console=self.console, show_time=True, show_path=False, rich_tracebacks=True)
         console_handler.setLevel(getattr(logging, self.config.level.upper()))
         self.logger.addHandler(console_handler)
 
@@ -118,8 +114,8 @@ class DTELogger:
             message=message,
             component=self.current_component,
             round_id=self.current_round,
-            metrics=kwargs.get('metrics'),
-            metadata=kwargs.get('metadata')
+            metrics=kwargs.get("metrics"),
+            metadata=kwargs.get("metadata"),
         )
 
         # Log to JSON file
@@ -204,7 +200,7 @@ class DTELogger:
             "step": step,
             "round": self.current_round,
             "component": self.current_component,
-            **metrics
+            **metrics,
         }
 
         self.metrics_history.append(metrics_entry)
@@ -233,8 +229,9 @@ class DTELogger:
 
         self.console.print(table)
 
-    def log_debate_round(self, round_num: int, agents_responses: List[Dict[str, Any]],
-                        consensus_reached: bool, final_answer: str) -> None:
+    def log_debate_round(
+        self, round_num: int, agents_responses: List[Dict[str, Any]], consensus_reached: bool, final_answer: str
+    ) -> None:
         """Log details of a debate round."""
         with self.round_context(round_num):
             self.info(f"Debate Round {round_num} completed")
@@ -242,43 +239,29 @@ class DTELogger:
             metrics = {
                 "consensus_reached": consensus_reached,
                 "num_agents": len(agents_responses),
-                "final_answer": final_answer
+                "final_answer": final_answer,
             }
 
-            metadata = {
-                "agents_responses": agents_responses,
-                "round_type": "debate"
-            }
+            metadata = {"agents_responses": agents_responses, "round_type": "debate"}
 
             self.log_metrics(metrics)
-            self._log_structured("DEBATE", f"Round {round_num} results",
-                               metrics=metrics, metadata=metadata)
+            self._log_structured("DEBATE", f"Round {round_num} results", metrics=metrics, metadata=metadata)
 
     def log_training_step(self, step: int, loss: float, metrics: Dict[str, Any]) -> None:
         """Log training step information."""
-        training_metrics = {
-            "step": step,
-            "loss": loss,
-            "learning_rate": metrics.get("lr", 0),
-            **metrics
-        }
+        training_metrics = {"step": step, "loss": loss, "learning_rate": metrics.get("lr", 0), **metrics}
 
         self.log_metrics(training_metrics, step=step)
 
         if step % 10 == 0:  # Log every 10 steps
             self.info(f"Training step {step}: loss={loss:.4f}")
 
-    def log_evolution_round(self, round_num: int, performance_metrics: Dict[str, Any],
-                           improvement: float) -> None:
+    def log_evolution_round(self, round_num: int, performance_metrics: Dict[str, Any], improvement: float) -> None:
         """Log evolution round results."""
         with self.round_context(round_num):
             self.info(f"Evolution Round {round_num} completed - Improvement: {improvement:.4f}")
 
-            evolution_metrics = {
-                "round": round_num,
-                "improvement": improvement,
-                **performance_metrics
-            }
+            evolution_metrics = {"round": round_num, "improvement": improvement, **performance_metrics}
 
             self.log_metrics(evolution_metrics)
 
@@ -289,7 +272,7 @@ class DTELogger:
         checkpoint_metadata = {
             "checkpoint_path": checkpoint_path,
             "model_metrics": metrics,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
         self._log_structured("CHECKPOINT", "Model saved", metadata=checkpoint_metadata)
@@ -302,12 +285,12 @@ class DTELogger:
             "experiment_name": self.experiment_name,
             "total_duration_seconds": duration,
             "total_duration_hours": duration / 3600,
-            "final_metrics": final_metrics
+            "final_metrics": final_metrics,
         }
 
         self.info("=" * 60)
         self.info("EXPERIMENT COMPLETED")
-        self.info(f"Total Duration: {duration/3600:.2f} hours")
+        self.info(f"Total Duration: {duration / 3600:.2f} hours")
         self.info("Final Metrics:")
 
         for key, value in final_metrics.items():

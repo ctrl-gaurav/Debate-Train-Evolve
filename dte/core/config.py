@@ -18,6 +18,7 @@ from ..utils.helpers import ConfigurationError, validate_file_path, validate_mod
 @dataclass
 class ModelConfig:
     """Configuration for model settings."""
+
     base_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct"
     base_model_path: Optional[str] = None
     device: str = "auto"
@@ -45,6 +46,7 @@ class DebatePromptingConfig:
         critique_pairs: Number of peer solutions each agent must critique.
             Defaults to 2 per the DTE paper specification.
     """
+
     enabled: bool = True  # RCR is the core DTE innovation; on by default
     initial_prompt_type: str = "math"  # math, arc, general
     include_agent_context: bool = True
@@ -57,6 +59,7 @@ class DebatePromptingConfig:
 @dataclass
 class TemperatureAnnealingConfig:
     """Configuration for temperature annealing in debates."""
+
     enabled: bool = True
     start_temp: float = 0.7
     end_temp: float = 0.3
@@ -66,6 +69,7 @@ class TemperatureAnnealingConfig:
 @dataclass
 class DebateConfig:
     """Configuration for multi-agent debate settings matching original DTE."""
+
     num_agents: int = 3
     max_rounds: int = 3
 
@@ -93,6 +97,7 @@ class DebateConfig:
 @dataclass
 class DatasetInfo:
     """Configuration for a single dataset."""
+
     name: str
     path: str
     split: str
@@ -102,6 +107,7 @@ class DatasetInfo:
 @dataclass
 class DatasetsConfig:
     """Configuration for training and evaluation datasets."""
+
     names: List[str] = field(default_factory=lambda: ["gsm8k"])
     max_samples_per_dataset: int = 1000
     quality_threshold: float = 0.8
@@ -112,6 +118,7 @@ class DatasetsConfig:
 @dataclass
 class GRPOConfig:
     """Configuration for GRPO training parameters."""
+
     group_size: int = 4
     advantage_normalization: bool = True
     clip_ratio: float = 0.2
@@ -121,12 +128,13 @@ class GRPOConfig:
 @dataclass
 class RewardsConfig:
     """Configuration for DTE reward functions exactly matching original implementation."""
+
     # All 5 DTE reward function weights
     correctness_weight: float = 2.0  # Most important - correct answers
-    int_weight: float = 0.5          # Numeric answer format
-    strict_format_weight: float = 0.5 # Exact XML format compliance
-    soft_format_weight: float = 0.5   # Flexible XML format
-    xmlcount_weight: float = 0.5      # Granular XML scoring
+    int_weight: float = 0.5  # Numeric answer format
+    strict_format_weight: float = 0.5  # Exact XML format compliance
+    soft_format_weight: float = 0.5  # Flexible XML format
+    xmlcount_weight: float = 0.5  # Granular XML scoring
 
     # Legacy weights for backward compatibility
     answer_weight: float = 2.0
@@ -137,30 +145,31 @@ class RewardsConfig:
     def get_dte_weights(self) -> Dict[str, float]:
         """Get DTE-specific reward weights."""
         return {
-            'correctness': self.correctness_weight,
-            'int': self.int_weight,
-            'strict_format': self.strict_format_weight,
-            'soft_format': self.soft_format_weight,
-            'xmlcount': self.xmlcount_weight
+            "correctness": self.correctness_weight,
+            "int": self.int_weight,
+            "strict_format": self.strict_format_weight,
+            "soft_format": self.soft_format_weight,
+            "xmlcount": self.xmlcount_weight,
         }
 
 
 @dataclass
 class LoRAConfig:
     """Configuration for LoRA fine-tuning."""
+
     enabled: bool = True
     rank: int = 128
     alpha: int = 256
     dropout: float = 0.05
-    target_modules: List[str] = field(default_factory=lambda: [
-        "q_proj", "k_proj", "v_proj", "o_proj",
-        "gate_proj", "up_proj", "down_proj"
-    ])
+    target_modules: List[str] = field(
+        default_factory=lambda: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+    )
 
 
 @dataclass
 class TrainingConfig:
     """Configuration for training parameters."""
+
     learning_rate: float = 2e-5
     weight_decay: float = 0.01
     warmup_steps: int = 50
@@ -175,6 +184,7 @@ class TrainingConfig:
 @dataclass
 class EvolutionConfig:
     """Configuration for evolution rounds."""
+
     max_rounds: int = 3
     convergence_threshold: float = 0.01
     patience: int = 2
@@ -187,6 +197,7 @@ class EvolutionConfig:
 @dataclass
 class WandbConfig:
     """Configuration for Weights & Biases logging."""
+
     enabled: bool = False
     project: str = "dte-framework"
     entity: Optional[str] = None
@@ -195,20 +206,28 @@ class WandbConfig:
 @dataclass
 class LoggingConfig:
     """Configuration for logging and monitoring."""
+
     level: str = "INFO"
     log_dir: str = "./logs"
     experiment_name: str = "dte_experiment"
     save_checkpoints: bool = True
     checkpoint_freq: int = 100
-    track_metrics: List[str] = field(default_factory=lambda: [
-        "accuracy", "debate_consensus_rate", "sycophancy_rate",
-        "average_reasoning_length", "training_loss", "kl_divergence"
-    ])
+    track_metrics: List[str] = field(
+        default_factory=lambda: [
+            "accuracy",
+            "debate_consensus_rate",
+            "sycophancy_rate",
+            "average_reasoning_length",
+            "training_loss",
+            "kl_divergence",
+        ]
+    )
 
 
 @dataclass
 class HardwareConfig:
     """Configuration for hardware and optimization settings."""
+
     device: str = "auto"
     mixed_precision: bool = True
     max_memory_per_gpu: str = "20GB"
@@ -220,6 +239,7 @@ class HardwareConfig:
 @dataclass
 class PathsConfig:
     """Configuration for file paths and storage."""
+
     output_dir: str = "./outputs"
     models_dir: str = "./models"
     data_dir: str = "./data"
@@ -230,6 +250,7 @@ class PathsConfig:
 @dataclass
 class ExperimentConfig:
     """Configuration for experiment metadata and tracking."""
+
     name: str = "dte_pipeline_v1"
     description: str = "End-to-end DTE pipeline with RCR prompting and GRPO training"
     tags: List[str] = field(default_factory=lambda: ["dte", "multi-agent", "grpo", "reasoning"])
@@ -241,6 +262,7 @@ class ExperimentConfig:
 @dataclass
 class SafetyConfig:
     """Configuration for safety and validation settings."""
+
     filter_toxic_content: bool = True
     max_reasoning_length: int = 1000
     validate_model_outputs: bool = True
@@ -252,6 +274,7 @@ class SafetyConfig:
 @dataclass
 class DTEConfig:
     """Main configuration class for the DTE Framework."""
+
     model: ModelConfig = field(default_factory=ModelConfig)
     debate: DebateConfig = field(default_factory=DebateConfig)
     datasets: DatasetsConfig = field(default_factory=DatasetsConfig)
@@ -281,7 +304,7 @@ class DTEConfig:
         if not config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             config_dict = yaml.safe_load(f)
 
         return cls.from_dict(config_dict)
@@ -301,14 +324,19 @@ class DTEConfig:
 
         # Parse debate config with nested structures
         debate_dict = config_dict.get("debate", {})
-        debate_prompting = DebatePromptingConfig(**debate_dict.get("debate_prompting", debate_dict.get("rcr_prompting", {})))
+        debate_prompting = DebatePromptingConfig(
+            **debate_dict.get("debate_prompting", debate_dict.get("rcr_prompting", {}))
+        )
         temperature_annealing = TemperatureAnnealingConfig(**debate_dict.get("temperature_annealing", {}))
         debate = DebateConfig(
-            **{k: v for k, v in debate_dict.items()
-               if k not in ["debate_prompting", "rcr_prompting", "temperature_annealing"]},
+            **{
+                k: v
+                for k, v in debate_dict.items()
+                if k not in ["debate_prompting", "rcr_prompting", "temperature_annealing"]
+            },
             debate_prompting=debate_prompting,
             rcr_prompting=debate_prompting,  # Backward compatibility
-            temperature_annealing=temperature_annealing
+            temperature_annealing=temperature_annealing,
         )
 
         # Parse datasets config
@@ -323,11 +351,10 @@ class DTEConfig:
         rewards = RewardsConfig(**training_dict.get("rewards", {}))
         lora = LoRAConfig(**training_dict.get("lora", {}))
         training = TrainingConfig(
-            **{k: v for k, v in training_dict.items()
-               if k not in ["grpo", "rewards", "lora"]},
+            **{k: v for k, v in training_dict.items() if k not in ["grpo", "rewards", "lora"]},
             grpo=grpo,
             rewards=rewards,
-            lora=lora
+            lora=lora,
         )
 
         # Parse other configurations
@@ -339,10 +366,7 @@ class DTEConfig:
         # Parse experiment config with wandb
         experiment_dict = config_dict.get("experiment", {})
         wandb = WandbConfig(**experiment_dict.get("wandb", {}))
-        experiment = ExperimentConfig(
-            **{k: v for k, v in experiment_dict.items() if k != "wandb"},
-            wandb=wandb
-        )
+        experiment = ExperimentConfig(**{k: v for k, v in experiment_dict.items() if k != "wandb"}, wandb=wandb)
 
         safety = SafetyConfig(**config_dict.get("safety", {}))
 
@@ -356,7 +380,7 @@ class DTEConfig:
             hardware=hardware,
             paths=paths,
             experiment=experiment,
-            safety=safety
+            safety=safety,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -365,8 +389,9 @@ class DTEConfig:
         Returns:
             Dictionary representation of the configuration.
         """
+
         def dataclass_to_dict(obj):
-            if hasattr(obj, '__dataclass_fields__'):
+            if hasattr(obj, "__dataclass_fields__"):
                 return {k: dataclass_to_dict(v) for k, v in obj.__dict__.items()}
             elif isinstance(obj, list):
                 return [dataclass_to_dict(item) for item in obj]
@@ -384,7 +409,7 @@ class DTEConfig:
         config_path = Path(config_path)
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(self.to_dict(), f, default_flow_style=False, indent=2)
 
     def validate(self, strict: bool = False) -> List[str]:
@@ -461,7 +486,7 @@ class DTEConfig:
         if not (0 <= self.debate.consensus_threshold <= 1):
             errors.append("debate.consensus_threshold must be between 0 and 1")
 
-        if hasattr(self.debate, 'consensus_tolerance'):
+        if hasattr(self.debate, "consensus_tolerance"):
             try:
                 tolerance = float(self.debate.consensus_tolerance)
                 if tolerance <= 0:
@@ -474,7 +499,9 @@ class DTEConfig:
             if not self.debate.agent_models:
                 errors.append("debate.agent_models cannot be empty when use_diverse_agents is True")
             elif len(self.debate.agent_models) != self.debate.num_agents:
-                errors.append(f"Number of agent_models ({len(self.debate.agent_models)}) must match num_agents ({self.debate.num_agents})")
+                errors.append(
+                    f"Number of agent_models ({len(self.debate.agent_models)}) must match num_agents ({self.debate.num_agents})"
+                )
             else:
                 for i, model_name in enumerate(self.debate.agent_models):
                     try:
@@ -582,8 +609,13 @@ class DTEConfig:
 
         # Validate each dataset name against the full set of 7 supported datasets
         valid_datasets = [
-            "gsm8k", "gsm_plus", "math", "arc_challenge", "arc_easy",
-            "gpqa", "commonsense_qa",
+            "gsm8k",
+            "gsm_plus",
+            "math",
+            "arc_challenge",
+            "arc_easy",
+            "gpqa",
+            "commonsense_qa",
         ]
         for dataset_name in self.datasets.names:
             if dataset_name not in valid_datasets:
@@ -640,6 +672,7 @@ class DTEConfig:
             import random
 
             import numpy as np
+
             random.seed(self.experiment.seed)
             np.random.seed(self.experiment.seed)
 

@@ -44,9 +44,9 @@ def calculate_model_size(model_name: str) -> Optional[float]:
 
     # Common patterns for model sizes
     patterns = [
-        r'(\d+\.?\d*)b',  # e.g., "1.5b", "3b", "7b"
-        r'(\d+)b',        # e.g., "1b", "3b"
-        r'(\d+\.?\d*)-?billion',  # e.g., "7-billion"
+        r"(\d+\.?\d*)b",  # e.g., "1.5b", "3b", "7b"
+        r"(\d+)b",  # e.g., "1b", "3b"
+        r"(\d+\.?\d*)-?billion",  # e.g., "7-billion"
     ]
 
     for pattern in patterns:
@@ -72,7 +72,7 @@ def validate_device(device: str) -> torch.device:
     if device == "auto":
         if torch.cuda.is_available():
             return torch.device("cuda")
-        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             return torch.device("mps")
         else:
             return torch.device("cpu")
@@ -80,7 +80,7 @@ def validate_device(device: str) -> torch.device:
         device_obj = torch.device(device)
         if device == "cuda" and not torch.cuda.is_available():
             raise ValueError("CUDA requested but not available")
-        if device == "mps" and not (hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()):
+        if device == "mps" and not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()):
             raise ValueError("MPS requested but not available")
         return device_obj
     else:
@@ -149,8 +149,8 @@ def get_gpu_memory_info() -> Optional[Tuple[int, int]]:
     if not torch.cuda.is_available():
         return None
 
-    used = torch.cuda.memory_allocated() // (1024 ** 2)
-    total = torch.cuda.get_device_properties(0).total_memory // (1024 ** 2)
+    used = torch.cuda.memory_allocated() // (1024**2)
+    total = torch.cuda.get_device_properties(0).total_memory // (1024**2)
 
     return used, total
 
@@ -185,31 +185,37 @@ class DTEError(Exception):
 
 class ConfigurationError(DTEError):
     """Error in configuration validation or setup."""
+
     pass
 
 
 class DebateError(DTEError):
     """Error during multi-agent debate process."""
+
     pass
 
 
 class TrainingError(DTEError):
     """Error during model training."""
+
     pass
 
 
 class DataError(DTEError):
     """Error in data processing or loading."""
+
     pass
 
 
 class ModelError(DTEError):
     """Error in model loading or inference."""
+
     pass
 
 
-def safe_execute(func: Callable, *args, component: str = "unknown",
-                fallback_result: Any = None, reraise: bool = True, **kwargs) -> Any:
+def safe_execute(
+    func: Callable, *args, component: str = "unknown", fallback_result: Any = None, reraise: bool = True, **kwargs
+) -> Any:
     """Safely execute a function with error handling and logging.
 
     Args:
@@ -246,8 +252,9 @@ def safe_execute(func: Callable, *args, component: str = "unknown",
             return fallback_result
 
 
-def robust_retry(max_retries: int = 3, delay: float = 1.0,
-                backoff_factor: float = 2.0, exceptions: Tuple = (Exception,)):
+def robust_retry(
+    max_retries: int = 3, delay: float = 1.0, backoff_factor: float = 2.0, exceptions: Tuple = (Exception,)
+):
     """Decorator to retry function execution with exponential backoff.
 
     Args:
@@ -259,6 +266,7 @@ def robust_retry(max_retries: int = 3, delay: float = 1.0,
     Returns:
         Decorated function
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -280,15 +288,17 @@ def robust_retry(max_retries: int = 3, delay: float = 1.0,
             raise DTEError(
                 f"Function {func.__name__} failed after {max_retries} retries",
                 "retry_handler",
-                {"last_exception": str(last_exception), "attempts": max_retries + 1}
+                {"last_exception": str(last_exception), "attempts": max_retries + 1},
             ) from last_exception
 
         return wrapper
+
     return decorator
 
 
-def validate_file_path(path: Path, must_exist: bool = False,
-                      must_be_file: bool = False, create_parent: bool = False) -> Path:
+def validate_file_path(
+    path: Path, must_exist: bool = False, must_be_file: bool = False, create_parent: bool = False
+) -> Path:
     """Validate and optionally create file paths.
 
     Args:
@@ -344,10 +354,7 @@ def validate_model_name(model_name: str, available_models: Optional[List[str]] =
         raise ModelError(f"Invalid model name format: {model_name}", "model_validation")
 
     if available_models and model_name not in available_models:
-        raise ModelError(
-            f"Model '{model_name}' not in available models: {available_models}",
-            "model_validation"
-        )
+        raise ModelError(f"Model '{model_name}' not in available models: {available_models}", "model_validation")
 
     return model_name
 
@@ -369,7 +376,7 @@ def check_system_requirements(require_cuda: bool = False, min_memory_gb: Optiona
         "cuda_available": torch.cuda.is_available(),
         "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
         "python_version": f"{torch.__version__}",
-        "torch_version": torch.__version__
+        "torch_version": torch.__version__,
     }
 
     # Check CUDA requirement
@@ -380,13 +387,14 @@ def check_system_requirements(require_cuda: bool = False, min_memory_gb: Optiona
     if min_memory_gb:
         try:
             import psutil
+
             available_memory_gb = psutil.virtual_memory().available / (1024**3)
             system_info["available_memory_gb"] = available_memory_gb
 
             if available_memory_gb < min_memory_gb:
                 raise DTEError(
                     f"Insufficient memory: {available_memory_gb:.1f}GB available, {min_memory_gb}GB required",
-                    "system_check"
+                    "system_check",
                 )
         except ImportError:
             warnings.warn("psutil not available, cannot check memory requirements", UserWarning)

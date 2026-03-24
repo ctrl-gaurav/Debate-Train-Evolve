@@ -17,19 +17,21 @@ Tests cover:
 """
 
 import os
+
 import pytest
 
 # Pin to GPU 1 before any CUDA initialization (per spec: training on GPU 1)
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import torch
+
 from dte.core.config import (
-    ModelConfig,
-    TrainingConfig,
     GRPOConfig,
-    RewardsConfig,
     LoRAConfig,
+    ModelConfig,
     PathsConfig,
+    RewardsConfig,
+    TrainingConfig,
 )
 from dte.data.generator import TrainingExample
 from dte.training.grpo_trainer import GRPOTrainer
@@ -47,7 +49,7 @@ def _make_synthetic_examples(n: int = 20) -> list:
                 query=f"What is {a} + {b}?",
                 answer=str(a + b),
                 reasoning=f"To solve {a} + {b}, I add {a} and {b} together. "
-                          f"{a} + {b} = {a + b}. Therefore the answer is {a + b}.",
+                f"{a} + {b} = {a + b}. Therefore the answer is {a + b}.",
                 confidence=0.9,
                 source_dataset="synthetic",
                 debate_rounds=1,
@@ -121,7 +123,7 @@ class TestTrainingIntegration:
         # Loss should be finite
         for loss in metrics["epoch_losses"]:
             assert loss == loss  # not NaN
-            assert loss < 1e6   # not exploded
+            assert loss < 1e6  # not exploded
 
     def test_reward_calculation(self, training_setup):
         """Verify the full reward pipeline works end-to-end."""
@@ -284,10 +286,7 @@ class TestLoRATraining:
     def test_lora_adapter_present(self, lora_trainer):
         """LoRA adapter layers should be present in the model."""
         trainer, _ = lora_trainer
-        lora_params = [
-            name for name, _ in trainer.model.named_parameters()
-            if "lora" in name.lower()
-        ]
+        lora_params = [name for name, _ in trainer.model.named_parameters() if "lora" in name.lower()]
         assert len(lora_params) > 0, "No LoRA parameters found in model"
 
     def test_lora_weights_change_after_training(self, lora_trainer):
@@ -324,9 +323,7 @@ class TestLoRATraining:
         for name, param in trainer.model.named_parameters():
             if "lora" not in name.lower():
                 # Base model params should be frozen
-                assert not param.requires_grad, (
-                    f"Non-LoRA param {name} has requires_grad=True"
-                )
+                assert not param.requires_grad, f"Non-LoRA param {name} has requires_grad=True"
 
 
 @pytest.mark.gpu
@@ -364,21 +361,18 @@ class TestCheckpointRoundtrip:
         try:
             # Train for 1 epoch to trigger checkpoint save
             examples = _make_synthetic_examples(4)
-            metrics = trainer.train(examples)
+            trainer.train(examples)
 
             # Verify checkpoint was saved
-            checkpoint_dir = os.path.join(
-                str(out_dir / "models"), "checkpoint_epoch_0"
-            )
-            assert os.path.isdir(checkpoint_dir), (
-                f"Checkpoint directory not created: {checkpoint_dir}"
-            )
+            checkpoint_dir = os.path.join(str(out_dir / "models"), "checkpoint_epoch_0")
+            assert os.path.isdir(checkpoint_dir), f"Checkpoint directory not created: {checkpoint_dir}"
 
             # Check that model files exist
             from transformers import AutoModelForCausalLM, AutoTokenizer
-            assert os.path.exists(os.path.join(checkpoint_dir, "config.json")) or \
-                   os.path.exists(os.path.join(checkpoint_dir, "model.pt")), \
-                   "No model file found in checkpoint"
+
+            assert os.path.exists(os.path.join(checkpoint_dir, "config.json")) or os.path.exists(
+                os.path.join(checkpoint_dir, "model.pt")
+            ), "No model file found in checkpoint"
 
             # Check that training state was saved
             state_path = os.path.join(checkpoint_dir, "training_state.pt")
@@ -392,9 +386,7 @@ class TestCheckpointRoundtrip:
             assert state["epoch"] == 0
 
             # Verify we can reload the tokenizer from checkpoint
-            reloaded_tokenizer = AutoTokenizer.from_pretrained(
-                checkpoint_dir, trust_remote_code=True
-            )
+            reloaded_tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir, trust_remote_code=True)
             assert reloaded_tokenizer is not None
             assert reloaded_tokenizer.vocab_size == trainer.tokenizer.vocab_size
 

@@ -18,14 +18,15 @@ Tests cover:
 """
 
 import os
+
 import pytest
 
 # Pin to GPU 0 before any CUDA initialization (per spec: debate on GPU 0)
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-from dte.core.config import ModelConfig, DebateConfig, TemperatureAnnealingConfig
-from dte.debate.manager import DebateManager
+from dte.core.config import DebateConfig, ModelConfig, TemperatureAnnealingConfig
 from dte.debate.agent import _model_registry
+from dte.debate.manager import DebateManager
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
@@ -88,7 +89,9 @@ class TestDebateIntegration:
 
     def test_general_task_type_debate(self, debate_manager):
         """A general reasoning question should produce a valid result."""
-        general_query = "If all roses are flowers and some flowers fade quickly, can we conclude that some roses fade quickly?"
+        general_query = (
+            "If all roses are flowers and some flowers fade quickly, can we conclude that some roses fade quickly?"
+        )
         result = debate_manager.conduct_debate(general_query, task_type="general")
 
         assert result.final_answer is not None
@@ -176,33 +179,22 @@ class TestTemperatureAnnealing:
     def test_temperature_decreases_across_rounds(self, annealing_manager):
         """Temperature should decrease as evolution round increases."""
         # Record starting temperature
-        initial_temps = [
-            agent.generation_config.get("temperature", 0.7)
-            for agent in annealing_manager.agents
-        ]
+        initial_temps = [agent.generation_config.get("temperature", 0.7) for agent in annealing_manager.agents]
 
         # Advance to evolution round 1
         annealing_manager.update_evolution_round(1)
-        mid_temps = [
-            agent.generation_config.get("temperature", 0.7)
-            for agent in annealing_manager.agents
-        ]
+        mid_temps = [agent.generation_config.get("temperature", 0.7) for agent in annealing_manager.agents]
 
         # Advance to evolution round 2
         annealing_manager.update_evolution_round(2)
-        late_temps = [
-            agent.generation_config.get("temperature", 0.7)
-            for agent in annealing_manager.agents
-        ]
+        late_temps = [agent.generation_config.get("temperature", 0.7) for agent in annealing_manager.agents]
 
         # Temperature should be monotonically non-increasing
         for i in range(len(annealing_manager.agents)):
             assert mid_temps[i] <= initial_temps[i] + 1e-6, (
                 f"Agent {i}: mid temp {mid_temps[i]} > initial {initial_temps[i]}"
             )
-            assert late_temps[i] <= mid_temps[i] + 1e-6, (
-                f"Agent {i}: late temp {late_temps[i]} > mid {mid_temps[i]}"
-            )
+            assert late_temps[i] <= mid_temps[i] + 1e-6, f"Agent {i}: late temp {late_temps[i]} > mid {mid_temps[i]}"
 
     def test_debate_works_after_annealing(self, annealing_manager):
         """Debate should still produce valid results after temperature change."""
@@ -235,9 +227,7 @@ class TestWeightSharing:
 
             # All agents should share the exact same model object (same id())
             model_ids = [id(agent.model) for agent in agents]
-            assert model_ids[0] == model_ids[1] == model_ids[2], (
-                "Agents do not share the same model object in memory"
-            )
+            assert model_ids[0] == model_ids[1] == model_ids[2], "Agents do not share the same model object in memory"
 
             # All agents should share the same tokenizer object
             tokenizer_ids = [id(agent.tokenizer) for agent in agents]

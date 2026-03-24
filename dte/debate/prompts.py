@@ -35,6 +35,7 @@ class DebateResponse:
         round_number: The debate round this response belongs to.
         agent_id: Identifier for the agent that produced this response.
     """
+
     answer: str
     reasoning: str
     extracted_answer: str
@@ -73,9 +74,7 @@ class DebatePromptManager:
             ValueError: If critique_pairs is less than 1.
         """
         if critique_pairs < 1:
-            raise ValueError(
-                f"critique_pairs must be at least 1, got {critique_pairs}"
-            )
+            raise ValueError(f"critique_pairs must be at least 1, got {critique_pairs}")
         self.critique_pairs = critique_pairs
 
     # ------------------------------------------------------------------
@@ -105,10 +104,7 @@ class DebatePromptManager:
         elif task_type == "general":
             return self._create_general_initial_prompt(query)
         else:
-            raise ValueError(
-                f"Unknown task_type '{task_type}'. "
-                "Expected one of: 'math', 'arc', 'general'."
-            )
+            raise ValueError(f"Unknown task_type '{task_type}'. Expected one of: 'math', 'arc', 'general'.")
 
     def _create_math_initial_prompt(self, question: str) -> str:
         """Create initial prompt for mathematical reasoning tasks."""
@@ -193,17 +189,11 @@ class DebatePromptManager:
             Formatted RCR debate prompt string.
         """
         if task_type == "math":
-            return self._create_math_rcr_prompt(
-                query, agent_id, round_num, answers_so_far
-            )
+            return self._create_math_rcr_prompt(query, agent_id, round_num, answers_so_far)
         elif task_type == "arc":
-            return self._create_arc_rcr_prompt(
-                query, agent_id, round_num, answers_so_far
-            )
+            return self._create_arc_rcr_prompt(query, agent_id, round_num, answers_so_far)
         else:
-            return self._create_general_rcr_prompt(
-                query, agent_id, round_num, answers_so_far
-            )
+            return self._create_general_rcr_prompt(query, agent_id, round_num, answers_so_far)
 
     # -- Math RCR prompt --
 
@@ -228,11 +218,7 @@ class DebatePromptManager:
         for pid in critique_targets:
             peer_text = answers_so_far[pid]
             peer_ans = extract_final_answer(peer_text)
-            peer_section += (
-                f"--- Agent {pid} ---\n"
-                f"Solution: {peer_text}\n"
-                f"Extracted answer: {peer_ans}\n\n"
-            )
+            peer_section += f"--- Agent {pid} ---\nSolution: {peer_text}\nExtracted answer: {peer_ans}\n\n"
 
         # Build the remaining peers as context (not required to critique)
         remaining_peers = [pid for pid in peer_ids if pid not in critique_targets]
@@ -242,9 +228,7 @@ class DebatePromptManager:
             for pid in remaining_peers:
                 peer_text = answers_so_far[pid]
                 peer_ans = extract_final_answer(peer_text)
-                context_section += (
-                    f"Agent {pid} answer: {peer_ans}\n"
-                )
+                context_section += f"Agent {pid} answer: {peer_ans}\n"
 
         prompt = f"""You are Agent {agent_id} in a multi-agent debate (round {round_num}).
 
@@ -305,11 +289,7 @@ Your final answer must be in the format \\boxed{{answer}} at the end."""
         for pid in critique_targets:
             peer_text = answers_so_far[pid]
             peer_ans = self._extract_arc_answer(peer_text)
-            peer_section += (
-                f"--- Agent {pid} ---\n"
-                f"Reasoning: {peer_text}\n"
-                f"Answer: {peer_ans}\n\n"
-            )
+            peer_section += f"--- Agent {pid} ---\nReasoning: {peer_text}\nAnswer: {peer_ans}\n\n"
 
         prompt = f"""You are Agent {agent_id} in a multi-agent debate (round {round_num}).
 
@@ -355,10 +335,7 @@ Please give your final answer in the format: Answer: [letter]"""
         peer_section = ""
         for pid in critique_targets:
             peer_text = answers_so_far[pid]
-            peer_section += (
-                f"--- Agent {pid} ---\n"
-                f"Response: {peer_text}\n\n"
-            )
+            peer_section += f"--- Agent {pid} ---\nResponse: {peer_text}\n\n"
 
         prompt = f"""You are Agent {agent_id} in a multi-agent debate (round {round_num}).
 
@@ -445,9 +422,7 @@ Based on your reflection and critiques, provide your refined solution. Incorpora
     # Validation
     # ------------------------------------------------------------------
 
-    def validate_response_format(
-        self, response: DebateResponse, task_type: str = "math"
-    ) -> List[str]:
+    def validate_response_format(self, response: DebateResponse, task_type: str = "math") -> List[str]:
         """Validate that a response follows the expected format.
 
         Args:

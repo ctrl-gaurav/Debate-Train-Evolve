@@ -60,13 +60,15 @@ class DataProcessor:
                 # Validate confidence score
                 confidence = max(0.0, min(1.0, example.confidence or 0.5))
 
-                processed.append({
-                    "query": example.query.strip(),
-                    "answer": example.answer.strip(),
-                    "reasoning": example.reasoning.strip(),
-                    "confidence": confidence,
-                    "example_id": i
-                })
+                processed.append(
+                    {
+                        "query": example.query.strip(),
+                        "answer": example.answer.strip(),
+                        "reasoning": example.reasoning.strip(),
+                        "confidence": confidence,
+                        "example_id": i,
+                    }
+                )
             except Exception as e:
                 # Log warning but continue processing
                 print(f"Warning: Skipping malformed example {i}: {e}")
@@ -95,16 +97,18 @@ class DataProcessor:
         if format_type == "xml":
             # DTE standard XML format for reward function compatibility
             return f"""<reasoning>
-{example['reasoning']}
+{example["reasoning"]}
 </reasoning>
 <answer>
-{example['answer']}
+{example["answer"]}
 </answer>
 """
         elif format_type == "plain":
             return f"Query: {example['query']}\n\nAnswer: {example['answer']}\n\nReasoning: {example['reasoning']}"
         elif format_type == "chat":
-            return f"Human: {example['query']}\n\nAssistant: {example['reasoning']}\n\nThe answer is {example['answer']}."
+            return (
+                f"Human: {example['query']}\n\nAssistant: {example['reasoning']}\n\nThe answer is {example['answer']}."
+            )
         else:
             raise ValueError(f"Unsupported format type: {format_type}")
 
@@ -129,7 +133,7 @@ class DataProcessor:
             "has_answer_tags": False,
             "reasoning_content": None,
             "answer_content": None,
-            "errors": []
+            "errors": [],
         }
 
         # Check for reasoning tags
@@ -183,5 +187,5 @@ class DataProcessor:
             "average_answer_length": avg_answer_length,
             "average_confidence": avg_confidence,
             "xml_format_compliance_rate": valid_xml_count / total_examples,
-            "quality_score": (avg_confidence + valid_xml_count / total_examples) / 2
+            "quality_score": (avg_confidence + valid_xml_count / total_examples) / 2,
         }

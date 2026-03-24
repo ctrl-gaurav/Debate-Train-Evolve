@@ -3,15 +3,15 @@
 import pytest
 
 from dte.utils.answer_extraction import (
-    extract_final_answer,
-    extract_ground_truth,
-    clean_numeric_string,
     answers_match,
+    calculate_accuracy,
     check_consensus,
+    clean_numeric_string,
+    consolidate_reasoning_traces,
     detect_sycophancy,
     extract_arc_answer,
-    calculate_accuracy,
-    consolidate_reasoning_traces,
+    extract_final_answer,
+    extract_ground_truth,
 )
 
 
@@ -207,10 +207,11 @@ class TestConsolidateReasoningTraces:
 
     def test_basic_consolidation(self):
         responses = [
-            ["First I add 5 + 3 = 8 to get the intermediate result",
-             "Adding 5 and 3 gives us 8 as a first step"],
-            ["Then multiply 8 * 2 = 16 for the final answer",
-             "The product of 8 and 2 is 16 therefore the answer is 16"],
+            ["First I add 5 + 3 = 8 to get the intermediate result", "Adding 5 and 3 gives us 8 as a first step"],
+            [
+                "Then multiply 8 * 2 = 16 for the final answer",
+                "The product of 8 and 2 is 16 therefore the answer is 16",
+            ],
         ]
         result = consolidate_reasoning_traces(responses, "16")
         assert isinstance(result, str)

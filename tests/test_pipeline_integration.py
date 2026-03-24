@@ -15,25 +15,26 @@ Tests cover:
 
 import json
 import os
+
 import pytest
 
 # Pin to GPU 3 before any CUDA initialization
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 from dte.core.config import (
-    DTEConfig,
-    ModelConfig,
-    DebateConfig,
-    TrainingConfig,
-    GRPOConfig,
-    RewardsConfig,
-    LoRAConfig,
-    EvolutionConfig,
-    PathsConfig,
-    DatasetsConfig,
     DatasetInfo,
-    LoggingConfig,
+    DatasetsConfig,
+    DebateConfig,
+    DTEConfig,
+    EvolutionConfig,
     ExperimentConfig,
+    GRPOConfig,
+    LoggingConfig,
+    LoRAConfig,
+    ModelConfig,
+    PathsConfig,
+    RewardsConfig,
+    TrainingConfig,
 )
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
@@ -104,9 +105,7 @@ class TestPipelineIntegration:
         """A debate manager created from config should produce results."""
         from dte.debate.manager import DebateManager
 
-        manager = DebateManager(
-            pipeline_config.debate, pipeline_config.model, logger=None
-        )
+        manager = DebateManager(pipeline_config.debate, pipeline_config.model, logger=None)
         try:
             result = manager.conduct_debate("What is 2 + 3?", task_type="math")
             assert result.final_answer is not None
@@ -162,9 +161,7 @@ class TestDataGenerationIntegration:
             ],
         )
 
-        generator = DebateDataGenerator(
-            datasets_cfg, debate_cfg, model_cfg, logger=None
-        )
+        generator = DebateDataGenerator(datasets_cfg, debate_cfg, model_cfg, logger=None)
         yield generator, out_dir
         generator.cleanup()
 
@@ -173,11 +170,13 @@ class TestDataGenerationIntegration:
         generator, out_dir = generator_setup
 
         # Relax quality filters for testing with small model
-        generator.update_quality_filters({
-            "min_reasoning_length": 1,
-            "require_consensus": False,
-            "min_consensus_confidence": 0.0,
-        })
+        generator.update_quality_filters(
+            {
+                "min_reasoning_length": 1,
+                "require_consensus": False,
+                "min_consensus_confidence": 0.0,
+            }
+        )
 
         examples = generator.generate_training_data(
             num_samples=2,
@@ -248,9 +247,7 @@ class TestPipelineCheckpoint:
                 cache_dir=str(tmp_path / "cache"),
                 temp_dir=str(tmp_path / "tmp"),
             ),
-            logging=LoggingConfig(
-                level="WARNING", log_dir=str(tmp_path / "logs")
-            ),
+            logging=LoggingConfig(level="WARNING", log_dir=str(tmp_path / "logs")),
             experiment=ExperimentConfig(name="checkpoint_test", seed=42),
         )
 
@@ -346,19 +343,17 @@ class TestSingleRoundEvolution:
         )
 
         # Phase 1: Generate debate data
-        generator = DebateDataGenerator(
-            datasets_cfg, debate_cfg, model_cfg, logger=None
+        generator = DebateDataGenerator(datasets_cfg, debate_cfg, model_cfg, logger=None)
+        generator.update_quality_filters(
+            {
+                "min_reasoning_length": 1,
+                "require_consensus": False,
+                "min_consensus_confidence": 0.0,
+            }
         )
-        generator.update_quality_filters({
-            "min_reasoning_length": 1,
-            "require_consensus": False,
-            "min_consensus_confidence": 0.0,
-        })
 
         try:
-            examples = generator.generate_training_data(
-                num_samples=2, evolution_round=0
-            )
+            examples = generator.generate_training_data(num_samples=2, evolution_round=0)
 
             # If quality filters removed all examples, create synthetic fallbacks
             if len(examples) == 0:

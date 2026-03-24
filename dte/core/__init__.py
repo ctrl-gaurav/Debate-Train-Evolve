@@ -21,6 +21,7 @@ from .logger import DTELogger
 try:
     from .evaluator import DTEEvaluator
     from .pipeline import DTEPipeline
+
     _PIPELINE_AVAILABLE = True
 except ImportError:
     DTEPipeline = None  # type: ignore[assignment,misc]
