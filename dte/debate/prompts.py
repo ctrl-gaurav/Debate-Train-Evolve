@@ -1,21 +1,40 @@
 """
-Debate prompting system based on original DTE implementation.
+RCR (Reflect-Critique-Refine) prompting system for DTE multi-agent debate.
 
-This module implements the exact prompting strategy used in the original DTE codebase,
-which is more straightforward than RCR but highly effective at reducing sycophancy
-and verbosity bias through structured debate instructions.
+This module implements the three-phase RCR prompting strategy described in the
+DTE paper (EMNLP 2025). Each debate round after round 0 follows three explicit
+phases:
+
+1. **Reflect** -- The agent reflects on its own previous reasoning, identifying
+   strengths and weaknesses.
+2. **Critique** -- The agent critiques exactly 2 peer solutions with structured
+   feedback covering correctness, reasoning quality, and completeness.
+3. **Refine** -- The agent synthesizes all feedback (self-reflection and peer
+   critiques) to produce a refined answer.
+
+The initial round (round 0) uses a standard problem-solving prompt without
+RCR phases.
 """
 
 import re
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..utils.answer_extraction import extract_final_answer
 
 
 @dataclass
 class DebateResponse:
-    """Structured response from a debate agent."""
+    """Structured response from a debate agent.
+
+    Attributes:
+        answer: The raw answer text from the agent.
+        reasoning: The full reasoning/response text.
+        extracted_answer: The extracted final answer (e.g. numeric value).
+        confidence: Optional confidence score (0-1).
+        round_number: The debate round this response belongs to.
+        agent_id: Identifier for the agent that produced this response.
+    """
     answer: str
     reasoning: str
     extracted_answer: str
@@ -25,223 +44,359 @@ class DebateResponse:
 
 
 class DebatePromptManager:
+    """Manager for RCR (Reflect-Critique-Refine) debate prompts.
+
+    This class implements the core RCR prompting innovation from the DTE paper.
+    For round 0 it produces a standard problem-solving prompt. For subsequent
+    rounds it produces a three-phase prompt that explicitly asks the agent to:
+
+    1. Reflect on its own previous reasoning
+    2. Critique exactly 2 peer solutions
+    3. Refine its answer based on all feedback
+
+    The number of critique targets is configurable but defaults to 2 as
+    specified in the paper.
+
+    Args:
+        critique_pairs: Number of peer solutions each agent must critique
+            per round. Defaults to 2 per the paper specification.
     """
-    Manager for debate prompts based on original DTE implementation.
 
-    This implements the exact prompting strategy from the original codebase,
-    which uses clear, structured instructions for initial problem solving
-    and multi-agent debate without explicit RCR phases.
-    """
-
-    def __init__(self):
-        """Initialize debate prompt manager."""
-        pass
-
-    def create_initial_prompt(self, query: str, task_type: str = "math") -> str:
-        """
-        Generate initial prompt for round 0 of debate.
-
-        This matches the exact initial prompting from the original DTE codebase.
+    def __init__(self, critique_pairs: int = 2):
+        """Initialize the RCR debate prompt manager.
 
         Args:
-            query: The question/problem to solve
-            task_type: Type of task (math, arc, reasoning)
+            critique_pairs: Number of peer solutions to critique per round.
+                Must be at least 1. Defaults to 2 as in the DTE paper.
+
+        Raises:
+            ValueError: If critique_pairs is less than 1.
+        """
+        if critique_pairs < 1:
+            raise ValueError(
+                f"critique_pairs must be at least 1, got {critique_pairs}"
+            )
+        self.critique_pairs = critique_pairs
+
+    # ------------------------------------------------------------------
+    # Initial prompt (round 0)
+    # ------------------------------------------------------------------
+
+    def create_initial_prompt(self, query: str, task_type: str = "math") -> str:
+        """Generate the initial prompt for round 0 of debate.
+
+        Round 0 does not use RCR -- agents solve the problem independently.
+
+        Args:
+            query: The question or problem to solve. For ARC tasks this
+                should be a dict with ``question`` and ``choices`` keys.
+            task_type: One of ``"math"``, ``"arc"``, or ``"general"``.
 
         Returns:
-            Formatted initial prompt
+            Formatted initial prompt string.
+
+        Raises:
+            ValueError: If *task_type* is not recognized.
         """
         if task_type == "math":
             return self._create_math_initial_prompt(query)
         elif task_type == "arc":
             return self._create_arc_initial_prompt(query)
-        else:
+        elif task_type == "general":
             return self._create_general_initial_prompt(query)
+        else:
+            raise ValueError(
+                f"Unknown task_type '{task_type}'. "
+                "Expected one of: 'math', 'arc', 'general'."
+            )
 
     def _create_math_initial_prompt(self, question: str) -> str:
         """Create initial prompt for mathematical reasoning tasks."""
-        return f"""Can you solve this math problem?
-Your final answer must be in the format \\boxed{{answer}} at the end.
+        return (
+            f"Can you solve this math problem?\n"
+            f"Your final answer must be in the format \\boxed{{answer}} at the end.\n\n"
+            f"Problem: {question}"
+        )
 
-Problem: {question}"""
+    def _create_arc_initial_prompt(self, question_data) -> str:
+        """Create initial prompt for ARC-Challenge tasks.
 
-    def _create_arc_initial_prompt(self, question_data: Dict[str, Any]) -> str:
-        """Create initial prompt for ARC-Challenge tasks."""
+        Args:
+            question_data: Either a string or a dict with ``question``,
+                ``choices`` (with ``text`` and ``label`` lists) keys.
+        """
+        if isinstance(question_data, str):
+            return (
+                f"Answer the following multiple-choice question.\n"
+                f"Read the question and all choices carefully before answering.\n\n"
+                f"{question_data}\n\n"
+                f"Please provide your reasoning and then give your final answer "
+                f"in the format: Answer: [letter]"
+            )
+
         question = question_data.get("question", "")
-        choices = question_data.get("choices", {}).get("text", [])
-        labels = question_data.get("choices", {}).get("label", [])
+        choices = question_data.get("choices", {})
+        labels = choices.get("label", [])
+        texts = choices.get("text", [])
 
         choices_text = ""
-        for label, choice in zip(labels, choices):
+        for label, choice in zip(labels, texts):
             choices_text += f"{label}. {choice}\n"
 
-        return f"""Answer the following multiple-choice question from the ARC Challenge dataset.
-Read the question and all choices carefully before answering.
-
-Question: {question}
-
-Choices:
-{choices_text}
-
-Please provide your reasoning and then give your final answer in the format: Answer: [letter]"""
+        return (
+            f"Answer the following multiple-choice question from the ARC Challenge dataset.\n"
+            f"Read the question and all choices carefully before answering.\n\n"
+            f"Question: {question}\n\n"
+            f"Choices:\n{choices_text}\n"
+            f"Please provide your reasoning and then give your final answer "
+            f"in the format: Answer: [letter]"
+        )
 
     def _create_general_initial_prompt(self, query: str) -> str:
         """Create initial prompt for general reasoning tasks."""
-        return f"""Please solve the following problem step by step.
-Provide clear reasoning and a definitive final answer.
+        return (
+            f"Please solve the following problem step by step.\n"
+            f"Provide clear reasoning and a definitive final answer.\n\n"
+            f"Problem: {query}"
+        )
 
-Problem: {query}"""
+    # ------------------------------------------------------------------
+    # RCR debate prompt (round > 0)
+    # ------------------------------------------------------------------
 
-    def create_debate_prompt(self, query: str, agent_id: str, round_num: int,
-                           answers_so_far: Dict[str, str], task_type: str = "math") -> str:
-        """
-        Generate debate prompt for rounds > 0.
+    def create_debate_prompt(
+        self,
+        query: str,
+        agent_id: str,
+        round_num: int,
+        answers_so_far: Dict[str, str],
+        task_type: str = "math",
+    ) -> str:
+        """Generate an RCR (Reflect-Critique-Refine) prompt for rounds > 0.
 
-        This implements the exact debate prompting strategy from the original
-        DTE codebase, which provides clear structure without explicit RCR phases.
+        The prompt contains three clearly delineated phases:
+
+        1. **Reflect** -- Agent examines its own previous reasoning.
+        2. **Critique** -- Agent critiques up to ``self.critique_pairs`` peer
+           solutions with structured feedback.
+        3. **Refine** -- Agent synthesizes all feedback into a refined answer.
 
         Args:
-            query: Original query/problem
-            agent_id: ID of current agent
-            round_num: Current debate round (1-indexed)
-            answers_so_far: Dictionary mapping agent IDs to their responses
-            task_type: Type of task
+            query: The original question/problem.
+            agent_id: ID of the current agent (e.g. ``"1"``).
+            round_num: Current debate round (1-indexed).
+            answers_so_far: Mapping of agent IDs to their most recent
+                reasoning text.
+            task_type: One of ``"math"``, ``"arc"``, or ``"general"``.
 
         Returns:
-            Formatted debate prompt
+            Formatted RCR debate prompt string.
         """
         if task_type == "math":
-            return self._create_math_debate_prompt(query, agent_id, round_num, answers_so_far)
+            return self._create_math_rcr_prompt(
+                query, agent_id, round_num, answers_so_far
+            )
         elif task_type == "arc":
-            return self._create_arc_debate_prompt(query, agent_id, round_num, answers_so_far)
+            return self._create_arc_rcr_prompt(
+                query, agent_id, round_num, answers_so_far
+            )
         else:
-            return self._create_general_debate_prompt(query, agent_id, round_num, answers_so_far)
+            return self._create_general_rcr_prompt(
+                query, agent_id, round_num, answers_so_far
+            )
 
-    def _create_math_debate_prompt(self, question: str, agent_id: str, round_num: int,
-                                 answers_so_far: Dict[str, str]) -> str:
-        """Create debate prompt for mathematical reasoning tasks."""
-        # Format previous answers for context
-        context = ""
-        for other_agent_id, answer in answers_so_far.items():
-            if other_agent_id != agent_id:  # Skip own previous answer
-                extracted = extract_final_answer(answer)
-                context += f"Agent {other_agent_id} solution: {answer}\n\n"
-                context += f"Agent {other_agent_id} answer: {extracted}\n\n"
+    # -- Math RCR prompt --
 
-        # Format own previous answer if it exists
-        own_previous = ""
-        if agent_id in answers_so_far:
-            own_previous = f"""Your previous solution was:
-{answers_so_far[agent_id]}
+    def _create_math_rcr_prompt(
+        self,
+        question: str,
+        agent_id: str,
+        round_num: int,
+        answers_so_far: Dict[str, str],
+    ) -> str:
+        """Build the three-phase RCR prompt for math tasks."""
+        # Separate own and peer responses
+        own_previous = answers_so_far.get(agent_id, "")
+        own_answer = extract_final_answer(own_previous) if own_previous else "N/A"
 
-Your previous extracted answer was: {extract_final_answer(answers_so_far[agent_id])}"""
+        peer_ids = [pid for pid in answers_so_far if pid != agent_id]
+        # Select up to critique_pairs peers
+        critique_targets = peer_ids[: self.critique_pairs]
 
-        prompt = f"""You are Agent {agent_id} in a multi-agent debate to solve the following math problem:
+        # Build peer section
+        peer_section = ""
+        for pid in critique_targets:
+            peer_text = answers_so_far[pid]
+            peer_ans = extract_final_answer(peer_text)
+            peer_section += (
+                f"--- Agent {pid} ---\n"
+                f"Solution: {peer_text}\n"
+                f"Extracted answer: {peer_ans}\n\n"
+            )
+
+        # Build the remaining peers as context (not required to critique)
+        remaining_peers = [pid for pid in peer_ids if pid not in critique_targets]
+        context_section = ""
+        if remaining_peers:
+            context_section = "\nAdditional peer solutions (for reference):\n"
+            for pid in remaining_peers:
+                peer_text = answers_so_far[pid]
+                peer_ans = extract_final_answer(peer_text)
+                context_section += (
+                    f"Agent {pid} answer: {peer_ans}\n"
+                )
+
+        prompt = f"""You are Agent {agent_id} in a multi-agent debate (round {round_num}).
 
 Problem: {question}
 
+Your previous solution:
 {own_previous}
 
-Here are the solutions from other agents:
-{context}
+Your previous extracted answer: {own_answer}
 
-This is debate round {round_num}. Please carefully analyze all solutions including your own, identify any errors in reasoning, and provide your revised solution.
+=== PHASE 1: REFLECT ===
+Carefully reflect on your own reasoning above. Identify any errors, gaps, or weak assumptions in your solution. Be honest about what you got right and what might be wrong.
 
-If you believe your previous answer is correct, explain why and defend it.
-If you believe you made an error, explain the error and provide a corrected solution.
-If you believe another agent's answer is correct, explain why you agree with it.
+=== PHASE 2: CRITIQUE ===
+Now critique the following peer solutions. For each peer, evaluate:
+- Is their final answer correct? Why or why not?
+- Are there errors in their reasoning steps?
+- Do they use any insights or approaches you missed?
+
+{peer_section}{context_section}
+=== PHASE 3: REFINE ===
+Based on your self-reflection and peer critiques, produce your refined solution. If you still believe your original answer is correct, defend it with stronger reasoning. If you found errors, correct them.
 
 Your final answer must be in the format \\boxed{{answer}} at the end."""
 
         return prompt
 
-    def _create_arc_debate_prompt(self, question_data: Dict[str, Any], agent_id: str,
-                                round_num: int, answers_so_far: Dict[str, str]) -> str:
-        """Create debate prompt for ARC-Challenge tasks."""
-        question = question_data.get("question", "")
-        choices = question_data.get("choices", {}).get("text", [])
-        labels = question_data.get("choices", {}).get("label", [])
+    # -- ARC RCR prompt --
 
-        choices_text = ""
-        for label, choice in zip(labels, choices):
-            choices_text += f"{label}. {choice}\n"
+    def _create_arc_rcr_prompt(
+        self,
+        question_data,
+        agent_id: str,
+        round_num: int,
+        answers_so_far: Dict[str, str],
+    ) -> str:
+        """Build the three-phase RCR prompt for ARC tasks."""
+        # Handle both string and dict question formats
+        if isinstance(question_data, dict):
+            question = question_data.get("question", "")
+            choices = question_data.get("choices", {})
+            labels = choices.get("label", [])
+            texts = choices.get("text", [])
+            choices_text = ""
+            for label, choice in zip(labels, texts):
+                choices_text += f"{label}. {choice}\n"
+        else:
+            question = question_data
+            choices_text = ""
 
-        # Format previous answers for context
-        context = ""
-        for other_agent_id, answer in answers_so_far.items():
-            if other_agent_id != agent_id:
-                extracted = self._extract_arc_answer(answer)
-                context += f"Agent {other_agent_id} reasoning: {answer}\n\n"
-                context += f"Agent {other_agent_id} answer: {extracted}\n\n"
+        own_previous = answers_so_far.get(agent_id, "")
+        own_answer = self._extract_arc_answer(own_previous) if own_previous else "N/A"
 
-        # Format own previous answer if it exists
-        own_previous = ""
-        if agent_id in answers_so_far:
-            own_previous = f"""Your previous reasoning was:
-{answers_so_far[agent_id]}
+        peer_ids = [pid for pid in answers_so_far if pid != agent_id]
+        critique_targets = peer_ids[: self.critique_pairs]
 
-Your previous answer was: {self._extract_arc_answer(answers_so_far[agent_id])}"""
+        peer_section = ""
+        for pid in critique_targets:
+            peer_text = answers_so_far[pid]
+            peer_ans = self._extract_arc_answer(peer_text)
+            peer_section += (
+                f"--- Agent {pid} ---\n"
+                f"Reasoning: {peer_text}\n"
+                f"Answer: {peer_ans}\n\n"
+            )
 
-        prompt = f"""You are Agent {agent_id} in a multi-agent debate to answer the following ARC Challenge question:
+        prompt = f"""You are Agent {agent_id} in a multi-agent debate (round {round_num}).
 
 Question: {question}
 
 Choices:
 {choices_text}
 
+Your previous reasoning:
 {own_previous}
 
-Here are the responses from other agents:
-{context}
+Your previous answer: {own_answer}
 
-This is debate round {round_num}. Please carefully analyze all responses including your own, identify any errors in scientific reasoning, and provide your revised answer.
+=== PHASE 1: REFLECT ===
+Reflect on your own reasoning above. Did you consider all relevant scientific principles? Are there any logical gaps or misinterpretations of the question?
 
-If you believe your previous answer is correct, explain why and defend it.
-If you believe you made an error, explain the error and provide a corrected answer.
-If you believe another agent's answer is correct, explain why you agree with it.
+=== PHASE 2: CRITIQUE ===
+Critique the following peer responses. For each, evaluate whether their scientific reasoning is sound and their choice is justified.
 
-Please provide your reasoning and then give your final answer in the format: Answer: [letter]"""
+{peer_section}
+=== PHASE 3: REFINE ===
+Synthesize your self-reflection and peer critiques. Provide your refined reasoning and final answer.
+
+Please give your final answer in the format: Answer: [letter]"""
 
         return prompt
 
-    def _create_general_debate_prompt(self, query: str, agent_id: str, round_num: int,
-                                    answers_so_far: Dict[str, str]) -> str:
-        """Create debate prompt for general reasoning tasks."""
-        # Format previous answers for context
-        context = ""
-        for other_agent_id, answer in answers_so_far.items():
-            if other_agent_id != agent_id:
-                context += f"Agent {other_agent_id} response: {answer}\n\n"
+    # -- General RCR prompt --
 
-        # Format own previous answer if it exists
-        own_previous = ""
-        if agent_id in answers_so_far:
-            own_previous = f"""Your previous response was:
-{answers_so_far[agent_id]}"""
+    def _create_general_rcr_prompt(
+        self,
+        query: str,
+        agent_id: str,
+        round_num: int,
+        answers_so_far: Dict[str, str],
+    ) -> str:
+        """Build the three-phase RCR prompt for general reasoning tasks."""
+        own_previous = answers_so_far.get(agent_id, "")
 
-        prompt = f"""You are Agent {agent_id} in a multi-agent debate to solve the following problem:
+        peer_ids = [pid for pid in answers_so_far if pid != agent_id]
+        critique_targets = peer_ids[: self.critique_pairs]
+
+        peer_section = ""
+        for pid in critique_targets:
+            peer_text = answers_so_far[pid]
+            peer_section += (
+                f"--- Agent {pid} ---\n"
+                f"Response: {peer_text}\n\n"
+            )
+
+        prompt = f"""You are Agent {agent_id} in a multi-agent debate (round {round_num}).
 
 Problem: {query}
 
+Your previous response:
 {own_previous}
 
-Here are the responses from other agents:
-{context}
+=== PHASE 1: REFLECT ===
+Reflect on your previous reasoning. What are its strengths? What might be wrong or incomplete?
 
-This is debate round {round_num}. Please carefully analyze all responses including your own, identify any errors in reasoning, and provide your revised solution.
+=== PHASE 2: CRITIQUE ===
+Critique the following peer responses. Identify errors, strong points, and novel insights.
 
-If you believe your previous answer is correct, explain why and defend it.
-If you believe you made an error, explain the error and provide a corrected solution.
-If you believe another agent's answer is correct, explain why you agree with it."""
+{peer_section}
+=== PHASE 3: REFINE ===
+Based on your reflection and critiques, provide your refined solution. Incorporate valid insights from peers and correct any errors you identified."""
 
         return prompt
 
+    # ------------------------------------------------------------------
+    # Answer extraction helpers
+    # ------------------------------------------------------------------
+
     def _extract_arc_answer(self, response: str) -> str:
-        """Extract ARC answer choice from response."""
+        """Extract ARC answer choice from response text.
+
+        Args:
+            response: Model response containing a letter choice.
+
+        Returns:
+            Extracted letter (A-D) or ``"Unable to Extract"``.
+        """
         patterns = [
             r"(?:answer|choice)(?:\s+is)?\s*:?\s*([A-D])",
             r"(?:^|\s)([A-D])(?:\s|$|\.|,)",
             r"\\boxed\{([A-D])\}",
-            r"\(([A-D])\)"
+            r"\(([A-D])\)",
         ]
 
         for pattern in patterns:
@@ -251,21 +406,28 @@ If you believe another agent's answer is correct, explain why you agree with it.
 
         return "Unable to Extract"
 
-    def parse_response(self, response_text: str, agent_id: str = "", round_num: int = 0,
-                      task_type: str = "math") -> DebateResponse:
-        """
-        Parse agent response into structured format.
+    # ------------------------------------------------------------------
+    # Response parsing
+    # ------------------------------------------------------------------
+
+    def parse_response(
+        self,
+        response_text: str,
+        agent_id: str = "",
+        round_num: int = 0,
+        task_type: str = "math",
+    ) -> DebateResponse:
+        """Parse raw agent output into a structured :class:`DebateResponse`.
 
         Args:
-            response_text: Raw response text from agent
-            agent_id: ID of the responding agent
-            round_num: Current round number
-            task_type: Type of task
+            response_text: Raw text generated by the agent.
+            agent_id: Identifier of the responding agent.
+            round_num: Current debate round number.
+            task_type: Task type (``"math"``, ``"arc"``, or ``"general"``).
 
         Returns:
-            Parsed DebateResponse object
+            A :class:`DebateResponse` with extracted answer and metadata.
         """
-        # Extract answer based on task type
         if task_type == "arc":
             extracted_answer = self._extract_arc_answer(response_text)
         else:
@@ -276,31 +438,33 @@ If you believe another agent's answer is correct, explain why you agree with it.
             reasoning=response_text,
             extracted_answer=extracted_answer,
             round_number=round_num,
-            agent_id=agent_id
+            agent_id=agent_id,
         )
 
-    def validate_response_format(self, response: DebateResponse, task_type: str = "math") -> List[str]:
-        """
-        Validate that response follows expected format.
+    # ------------------------------------------------------------------
+    # Validation
+    # ------------------------------------------------------------------
+
+    def validate_response_format(
+        self, response: DebateResponse, task_type: str = "math"
+    ) -> List[str]:
+        """Validate that a response follows the expected format.
 
         Args:
-            response: Parsed response to validate
-            task_type: Type of task
+            response: Parsed response to validate.
+            task_type: Task type for format-specific checks.
 
         Returns:
-            List of validation errors (empty if valid)
+            List of validation error strings (empty if valid).
         """
-        errors = []
+        errors: List[str] = []
 
-        # Check if answer was extracted successfully
         if response.extracted_answer == "Unable to Extract":
             errors.append("Could not extract answer from response")
 
-        # Check reasoning length
         if not response.reasoning or len(response.reasoning.strip()) < 20:
             errors.append("Reasoning too short or missing")
 
-        # Task-specific validations
         if task_type == "math":
             if "\\boxed{" not in response.reasoning:
                 errors.append("Missing \\boxed{} format for math answer")

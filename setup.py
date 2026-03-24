@@ -30,11 +30,12 @@ else:
         "numpy>=1.24.0",
         "pandas>=2.0.0",
         "scikit-learn>=1.3.0",
+        "psutil>=5.9.0",
     ]
 
 setup(
     name="dte-framework",
-    version="1.0.0",
+    version="0.1.0",
     author="Gaurav Srivastava, Zhenyu Bi, Meng Lu, Xuan Wang",
     author_email="gks@vt.edu",
     description="Debate, Train, Evolve: Self-Evolution of Language Model Reasoning",
@@ -45,7 +46,7 @@ setup(
         "Homepage": "https://ctrl-gaurav.github.io/debate-train-evolve.github.io/",
         "Repository": "https://github.com/ctrl-gaurav/Debate-Train-Evolve",
         "Issues": "https://github.com/ctrl-gaurav/Debate-Train-Evolve/issues",
-        "Paper": "https://2025.emnlp.org/",
+        "Paper": "https://aclanthology.org/2025.emnlp-main.1666/",
     },
     packages=find_packages(),
     classifiers=[
@@ -55,20 +56,20 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=requirements,
     extras_require={
         "dev": [
             "pytest>=7.4.0",
-            "black>=23.0.0",
-            "flake8>=6.0.0",
+            "pytest-cov>=4.1.0",
+            "ruff>=0.4.0",
             "mypy>=1.5.0",
         ],
         "wandb": [
@@ -81,12 +82,13 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "dte=main:cli",
+            "dte=dte.cli:cli",
         ],
     },
     include_package_data=True,
     package_data={
         "dte": [
+            "py.typed",
             "*.yaml",
             "*.json",
         ],

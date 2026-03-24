@@ -1,37 +1,40 @@
 """Dataset management utilities for DTE pipeline."""
 
-import os
 import json
-from typing import List, Dict, Any, Optional, Union, Tuple
+import os
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 from datasets import Dataset, load_dataset
+
 from .generator import TrainingExample
 
 
 class DatasetManager:
     """Manages dataset loading and preprocessing for DTE pipeline."""
 
-    # Dataset configurations matching original DTE implementation
+    # Dataset configurations matching original DTE implementation.
+    # Includes all 7 supported benchmarks (5 original + GPQA + CommonsenseQA).
     DATASET_CONFIGS = {
         "gsm8k": {
             "hf_name": "gsm8k",
             "hf_config": "main",
             "question_field": "question",
             "answer_field": "answer",
-            "task_type": "math"
+            "task_type": "math",
         },
         "gsm_plus": {
             "hf_name": "qintongli/GSM-Plus",
             "hf_config": None,
             "question_field": "question",
             "answer_field": "answer",
-            "task_type": "math"
+            "task_type": "math",
         },
         "math": {
             "hf_name": "hendrycks/competition_math",
             "hf_config": None,
             "question_field": "problem",
             "answer_field": "solution",
-            "task_type": "math"
+            "task_type": "math",
         },
         "arc_challenge": {
             "hf_name": "allenai/ai2_arc",
@@ -39,7 +42,7 @@ class DatasetManager:
             "question_field": "question",
             "answer_field": "answerKey",
             "task_type": "arc",
-            "choices_field": "choices"
+            "choices_field": "choices",
         },
         "arc_easy": {
             "hf_name": "allenai/ai2_arc",
@@ -47,8 +50,23 @@ class DatasetManager:
             "question_field": "question",
             "answer_field": "answerKey",
             "task_type": "arc",
-            "choices_field": "choices"
-        }
+            "choices_field": "choices",
+        },
+        "gpqa": {
+            "hf_name": "Idavidrein/gpqa",
+            "hf_config": "gpqa_main",
+            "question_field": "question",
+            "answer_field": "answer",
+            "task_type": "general",
+        },
+        "commonsense_qa": {
+            "hf_name": "tau/commonsense_qa",
+            "hf_config": None,
+            "question_field": "question",
+            "answer_field": "answerKey",
+            "task_type": "arc",
+            "choices_field": "choices",
+        },
     }
 
     def __init__(self, cache_dir: Optional[str] = None):
@@ -280,13 +298,22 @@ class DatasetManager:
         return config
 
     def _get_dataset_description(self, name: str) -> str:
-        """Get human-readable description of dataset."""
+        """Get human-readable description of a supported dataset.
+
+        Args:
+            name: Dataset identifier.
+
+        Returns:
+            Human-readable description string.
+        """
         descriptions = {
             "gsm8k": "Grade School Math 8K: Math word problems for elementary school students",
             "gsm_plus": "GSM8K-Plus: Extended version of GSM8K with additional problems",
             "math": "MATH: Competition mathematics problems from high school competitions",
             "arc_challenge": "ARC Challenge: Science questions requiring complex reasoning",
-            "arc_easy": "ARC Easy: Easier science questions from ARC dataset"
+            "arc_easy": "ARC Easy: Easier science questions from ARC dataset",
+            "gpqa": "GPQA: Graduate-level questions requiring domain expertise",
+            "commonsense_qa": "CommonsenseQA: Questions requiring commonsense reasoning",
         }
         return descriptions.get(name, "No description available")
 

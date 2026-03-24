@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check dte/ tests/
+      - run: ruff format --check dte/ tests/
+
+  type-check:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install mypy pyyaml types-PyYAML
+      - run: mypy dte/ --ignore-missing-imports
+
+  test:
+    name: Unit tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pytest-cov
+      - name: Run unit tests with coverage (skip GPU tests)
+        run: |
+          pytest -m "not gpu" -v --tb=short \
+            --cov=dte --cov-report=term-missing --cov-report=xml:coverage.xml \
+            --ignore=tests/test_debate_integration.py \
+            --ignore=tests/test_training_integration.py \
+            --ignore=tests/test_pipeline_integration.py \
+            --ignore=tests/test_evaluation_integration.py \
+            --ignore=tests/test_reward_integration.py \
+            --ignore=tests/test_data_integration.py
+      - name: Upload coverage artifact
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml

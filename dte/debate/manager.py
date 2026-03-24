@@ -7,16 +7,14 @@ consensus detection and sycophancy tracking.
 """
 
 import time
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
 from collections import defaultdict
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
+from ..core.logger import DTELogger
+from ..utils.answer_extraction import check_consensus, consolidate_reasoning_traces, detect_sycophancy
 from .agent import DebateAgent
 from .prompts import DebatePromptManager, DebateResponse
-from ..utils.answer_extraction import (
-    check_consensus, detect_sycophancy, consolidate_reasoning_traces
-)
-from ..core.logger import DTELogger
 
 
 @dataclass
@@ -427,24 +425,60 @@ class DebateManager:
         }
 
     def update_evolution_round(self, evolution_round: int) -> None:
-        """
-        Update the current evolution round for tracking purposes.
+        """Update the current evolution round and apply temperature annealing.
 
-        This method is called to track which evolution round the debate manager
-        is currently operating in, allowing for proper evolution-aware logging
-        and metrics collection.
+        For models smaller than the configured threshold (default 3B params),
+        the generation temperature is linearly annealed from ``start_temp``
+        to ``end_temp`` across the total number of evolution rounds. This
+        follows the DTE paper prescription for small-model training.
 
         Args:
-            evolution_round: The current evolution round number (0-indexed)
+            evolution_round: The current evolution round number (0-indexed).
         """
         self.current_evolution_round = evolution_round
         if self.logger:
             self.logger.info(f"Updated debate manager to evolution round {evolution_round}")
 
-        # Update agents with evolution round information if they support it
-        for agent in self.agents:
-            if hasattr(agent, 'set_evolution_round'):
-                agent.set_evolution_round(evolution_round)
+        # --- Temperature annealing for small models ---
+        ta_cfg = self.config.temperature_annealing
+        if ta_cfg.enabled:
+            # Parse minimum model size from config (e.g. "3B" -> 3.0)
+            from ..utils.helpers import calculate_model_size
+            model_name = getattr(self.model_config, 'base_model_name', '')
+            model_size = calculate_model_size(model_name)
+
+            min_size_str = ta_cfg.min_model_size.upper().replace("B", "")
+            try:
+                min_size = float(min_size_str)
+            except (ValueError, TypeError):
+                min_size = 3.0
+
+            # Only anneal if the model is *smaller* than the threshold
+            if model_size is not None and model_size < min_size:
+                # Determine total rounds from config if available
+                # (max_evolution_rounds is not stored here; infer from calling
+                #  code by using the max of evolution_round seen so far)
+                max_rounds = max(
+                    getattr(self, '_max_evolution_rounds', 3),
+                    evolution_round + 1,
+                )
+                self._max_evolution_rounds = max_rounds
+
+                progress = evolution_round / max(max_rounds - 1, 1)
+                annealed_temp = ta_cfg.start_temp + progress * (
+                    ta_cfg.end_temp - ta_cfg.start_temp
+                )
+                annealed_temp = max(ta_cfg.end_temp, min(ta_cfg.start_temp, annealed_temp))
+
+                if self.logger:
+                    self.logger.info(
+                        f"Temperature annealing: {annealed_temp:.3f} "
+                        f"(model {model_name}, size {model_size}B < {min_size}B threshold)"
+                    )
+
+                # Apply to all agents
+                for agent in self.agents:
+                    agent.update_generation_config({"temperature": annealed_temp})
 
     def cleanup(self) -> None:
         """Clean up all agent resources."""
@@ -455,5 +489,5 @@ class DebateManager:
         """Cleanup when manager is destroyed."""
         try:
             self.cleanup()
-        except:
+        except Exception:
             pass

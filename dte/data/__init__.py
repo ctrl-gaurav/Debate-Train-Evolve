@@ -1,7 +1,12 @@
 """Data processing and generation components."""
 
-from .generator import DebateDataGenerator
 from .dataset_manager import DatasetManager
+from .generator import DebateDataGenerator, TrainingExample
 from .processor import DataProcessor
 
-__all__ = ["DebateDataGenerator", "DatasetManager", "DataProcessor"]
+__all__ = [
+    "DebateDataGenerator",
+    "TrainingExample",
+    "DatasetManager",
+    "DataProcessor",
+]

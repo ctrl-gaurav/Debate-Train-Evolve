@@ -7,14 +7,14 @@ debate metrics, and performance analysis.
 """
 
 import time
-from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
-from .logger import DTELogger
 from ..data.dataset_manager import DatasetManager
 from ..debate.manager import DebateManager
 from ..utils.answer_extraction import clean_numeric_string
+from .logger import DTELogger
 
 
 @dataclass

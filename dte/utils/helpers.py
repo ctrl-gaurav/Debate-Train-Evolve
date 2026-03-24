@@ -1,14 +1,15 @@
 """General utility functions and error handling for DTE Framework."""
 
-import time
-import torch
-import re
-import traceback
 import functools
+import re
+import time
+import traceback
 import warnings
 from datetime import datetime
-from typing import Optional, Tuple, Any, Callable, Dict, List
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import torch
 
 
 def format_time(seconds: float) -> str:
@@ -97,6 +98,7 @@ def setup_reproducibility(seed: int = 42) -> None:
         seed: Random seed to use
     """
     import random
+
     import numpy as np
 
     random.seed(seed)

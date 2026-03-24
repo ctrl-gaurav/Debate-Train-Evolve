@@ -2,16 +2,21 @@
 
 <div align="center">
 
-[![EMNLP 2025](https://img.shields.io/badge/📄_EMNLP_2025-Main_Conference-brightgreen?style=for-the-badge)](https://2025.emnlp.org/)
-[![Website](https://img.shields.io/badge/🌐_Website-Live-blue?style=for-the-badge)](https://ctrl-gaurav.github.io/debate-train-evolve.github.io/)
+[![EMNLP 2025](https://img.shields.io/badge/📄_EMNLP_2025-Main_Conference-brightgreen?style=for-the-badge)](https://aclanthology.org/2025.emnlp-main.1666/)
+[![Website](https://img.shields.io/badge/🌐_Website-Live-blue?style=for-the-badge)](https://debate-train-evolve.github.io/)
 [![GitHub](https://img.shields.io/badge/💻_Code-Repository-orange?style=for-the-badge&logo=github)](https://github.com/ctrl-gaurav/Debate-Train-Evolve)
 [![License](https://img.shields.io/badge/📜_License-MIT-green?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)](https://python.org)
 
-*DTE Framework: Revolutionizing Language Model Reasoning*
+*DTE Framework v0.1.0: Self-Evolution of Language Model Reasoning*
 
 **🏆 EMNLP 2025 Main Conference • 🧠 Multi-Agent Debate • 🎯 GRPO Training • 📈 Up to 13.92% Improvement**
 
-[**🌟 Explore Project**](https://ctrl-gaurav.github.io/debate-train-evolve.github.io/) | [**📖 Read Paper**](https://2025.emnlp.org/) | [**💻 View Code**](https://github.com/ctrl-gaurav/Debate-Train-Evolve)
+**Authors:** [Gaurav Srivastava](mailto:gks@vt.edu)\*, [Zhenyu Bi](mailto:zhenyub@vt.edu), [Meng Lu](mailto:menglu@vt.edu), [Xuan Wang](mailto:xuanw@vt.edu)† — *Virginia Tech, Department of Computer Science*
+
+\* Lead Author &nbsp; † Corresponding Author
+
+[**🌟 Explore Project**](https://debate-train-evolve.github.io/) | [**📖 Read Paper**](https://aclanthology.org/2025.emnlp-main.1666/) | [**💻 View Code**](https://github.com/ctrl-gaurav/Debate-Train-Evolve)
 
 </div>
 
@@ -124,12 +129,28 @@ We introduce **DTE (Debate, Train, Evolve)**, a novel ground truth-free training
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- **Python 3.9+** (tested on 3.9, 3.10, 3.11; recommended: 3.11)
 - CUDA-compatible GPU (recommended for training)
 - 16GB+ RAM recommended for full pipeline
 - 8GB+ RAM for standalone debate functionality
 
-### Installation
+### Quick Setup (Recommended)
+
+The fastest way to get started is with our automated setup script, which creates a conda environment, installs all dependencies, and verifies everything works:
+
+```bash
+git clone https://github.com/ctrl-gaurav/Debate-Train-Evolve.git
+cd Debate-Train-Evolve
+bash setup.sh
+```
+
+The script will:
+1. Create a new conda environment `dte` with Python 3.11
+2. Install all dependencies (including GPU support)
+3. Run verification tests to confirm everything works
+4. Show a startup report with system information
+
+### Manual Installation
 
 ```bash
 # Clone the repository
@@ -308,7 +329,7 @@ model:
 debate:
   num_agents: 3
   max_rounds: 3
-  rcr_prompting:
+  debate_prompting:  # (or "rcr_prompting" for backward compatibility)
     enabled: true
     require_novel_reasoning: true
 
@@ -404,16 +425,44 @@ python main.py --help
 ### Python API
 
 ```python
-from dte import DTEConfig, DTEPipeline
+import dte
 
-# Load configuration
-config = DTEConfig.from_yaml("config.yaml")
+# Quick one-liner debate
+result = dte.debate(
+    "What is 15 * 24?",
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    num_agents=3,
+    max_rounds=3,
+    task_type="math",
+)
+print(result.final_answer)        # "360"
+print(result.consensus_reached)   # True
 
-# Create and run pipeline
-pipeline = DTEPipeline(config)
+# Full pipeline from config
+pipeline = dte.from_config("config.yaml")
 results = pipeline.run_complete_pipeline()
-
 print(f"Best performance: {results['best_performance']}")
+```
+
+### Component-Level API
+
+```python
+from dte.core.config import ModelConfig, DebateConfig
+from dte.debate.manager import DebateManager
+
+# Configure and run debates with fine-grained control
+model_cfg = ModelConfig(
+    base_model_name="Qwen/Qwen2.5-7B-Instruct",
+    device="auto",
+    temperature=0.7,
+)
+debate_cfg = DebateConfig(num_agents=3, max_rounds=3)
+
+manager = DebateManager(debate_cfg, model_cfg)
+result = manager.conduct_debate("What is 123 * 456?", task_type="math")
+print(result.final_answer)
+print(result.metrics)  # timing, sycophancy rate, etc.
+manager.cleanup()
 ```
 
 ## 🏗️ Architecture
@@ -423,25 +472,41 @@ print(f"Best performance: {results['best_performance']}")
 ```
 dte-framework/
 ├── dte/                          # Main package
+│   ├── __init__.py              # Public API (dte.debate(), dte.from_config())
 │   ├── core/                     # Core components
-│   │   ├── config.py            # Configuration management
-│   │   ├── logger.py            # Logging system
+│   │   ├── config.py            # Configuration dataclasses
+│   │   ├── evaluator.py         # Model evaluation
+│   │   ├── logger.py            # Rich-based logging
 │   │   └── pipeline.py          # Main pipeline orchestrator
 │   ├── debate/                   # Multi-agent debate
 │   │   ├── agent.py             # Individual debate agents
-│   │   ├── manager.py           # Debate orchestration
+│   │   ├── manager.py           # Debate orchestration & consensus
 │   │   └── prompts.py           # RCR prompting system
 │   ├── training/                 # GRPO training
 │   │   ├── grpo_trainer.py      # GRPO implementation
-│   │   └── reward_model.py      # Reward calculation
+│   │   └── reward_model.py      # 5 reward functions
 │   ├── data/                     # Data processing
 │   │   ├── generator.py         # Debate data generation
-│   │   └── processor.py         # Data preprocessing
+│   │   ├── processor.py         # Data preprocessing
+│   │   └── dataset_manager.py   # Dataset loading & management
 │   └── utils/                    # Utilities
+│       ├── answer_extraction.py # Answer parsing & consensus
+│       ├── helpers.py           # General utilities
+│       └── data_utils.py        # Data I/O utilities
+├── tests/                        # Test suite (124 unit + 11 GPU tests)
+├── examples/                     # Usage examples
+│   ├── quick_start.py           # One-liner debate
+│   ├── custom_debate.py         # Custom configuration
+│   ├── full_pipeline.py         # End-to-end pipeline
+│   ├── evaluation_example.py    # Benchmark evaluation
+│   ├── reward_functions.py      # Reward function demo (no GPU)
+│   └── multi_gpu_training.py    # Multi-GPU setup
+├── configs/                      # Example configurations
 ├── config.yaml                  # Default configuration
 ├── main.py                      # CLI interface
-├── requirements.txt             # Dependencies
-└── README.md                    # This file
+├── pyproject.toml               # Package metadata & build config
+├── setup.py                     # Legacy install support
+└── requirements.txt             # Dependencies
 ```
 
 ### Key Components
@@ -484,9 +549,9 @@ model:
 debate:
   num_agents: 5
   max_rounds: 4
-  consensus_threshold: 0.8
+  consensus_threshold: 1.0  # 1.0 = unanimous agreement required
 
-  rcr_prompting:
+  debate_prompting:  # (or "rcr_prompting" for backward compatibility)
     enabled: true
     require_novel_reasoning: true
     critique_pairs: 2
@@ -592,7 +657,8 @@ tail -f logs/dte_experiment.jsonl
    training:
      batch_size: 8  # Increase if GPU memory allows
      gradient_accumulation_steps: 4
-     num_workers: 4
+   hardware:
+     num_workers: 4  # DataLoader workers for parallel data loading
    ```
 
 3. **Memory Management**:
@@ -606,39 +672,31 @@ tail -f logs/dte_experiment.jsonl
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions!
 
 ### Development Setup
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/dte-framework.git
-cd dte-framework
+git clone https://github.com/ctrl-gaurav/Debate-Train-Evolve.git
+cd Debate-Train-Evolve
 
 # Install development dependencies
 pip install -e ".[dev]"
 
-# Run tests
-pytest tests/
+# Run unit tests (no GPU required)
+pytest -m "not gpu" -v
 
-# Format code
-black dte/ main.py
+# Run GPU integration tests
+CUDA_VISIBLE_DEVICES=0 pytest tests/test_debate_integration.py -v
+CUDA_VISIBLE_DEVICES=1 pytest tests/test_training_integration.py -v
+
+# Lint and format
+ruff check dte/ tests/
+ruff format dte/ tests/
 
 # Type checking
-mypy dte/
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_debate.py
-
-# Run with coverage
-pytest --cov=dte tests/
+mypy dte/ --ignore-missing-imports
 ```
 
 ## 🤝 Contributing & Community

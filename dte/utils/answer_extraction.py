@@ -6,7 +6,7 @@ and sycophancy tracking as used in the original DTE codebase.
 """
 
 import re
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 def extract_final_answer(response: str) -> str:
@@ -101,7 +101,7 @@ def clean_numeric_string(s: Union[str, int, float]) -> Optional[Union[int, float
         if "." in number_str:
             return round(float(number_str), 2)
         return int(number_str)
-    except:
+    except (ValueError, TypeError):
         return None
 
 

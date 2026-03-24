@@ -5,18 +5,18 @@ This module implements the complete end-to-end DTE (Debate, Train, Evolve)
 pipeline, coordinating all components and managing the iterative evolution process.
 """
 
-import time
 import json
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional
 
-from .config import DTEConfig
-from .logger import DTELogger
-from .evaluator import DTEEvaluator
 from ..data.generator import DebateDataGenerator
-from ..training.grpo_trainer import GRPOTrainer
 from ..debate.manager import DebateManager
+from ..training.grpo_trainer import GRPOTrainer
+from .config import DTEConfig
+from .evaluator import DTEEvaluator
+from .logger import DTELogger
 
 
 @dataclass
@@ -192,7 +192,7 @@ class DTEPipeline:
         self.logger.info(f"Evaluating model performance for round {round_num}")
 
         # Run comprehensive evaluation
-        max_samples = getattr(self.config.evaluation, 'max_samples_per_dataset', 100)
+        max_samples = getattr(self.config.datasets, 'max_samples_per_dataset', 100)
         evaluation_metrics = self.evaluator.evaluate_model(round_num, max_samples)
 
         # Create evaluation report
@@ -297,7 +297,7 @@ class DTEPipeline:
                 try:
                     import wandb
                     wandb.finish()
-                except:
+                except Exception:
                     pass
 
         except Exception as e:
@@ -371,5 +371,5 @@ class DTEPipeline:
         """Cleanup when pipeline is destroyed."""
         try:
             self._cleanup()
-        except:
+        except Exception:
             pass

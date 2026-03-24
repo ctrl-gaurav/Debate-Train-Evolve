@@ -10,8 +10,9 @@ This module implements all 5 reward functions used in the original DTE GRPO trai
 """
 
 import re
-from typing import List, Dict, Any, Optional
-from ..utils.answer_extraction import extract_final_answer, answers_match
+from typing import Any, Dict, List, Optional
+
+from ..utils.answer_extraction import answers_match, extract_final_answer
 
 
 class DTERewardModel:
@@ -225,14 +226,22 @@ class DTERewardModel:
     def combine_rewards(self, rewards_dict: Dict[str, List[float]],
                        weights: Optional[Dict[str, float]] = None) -> List[float]:
         """
-        Combine multiple reward signals into final reward.
+        Combine multiple reward signals into a final reward using weighted SUM.
+
+        The DTE paper specifies a weighted sum (not a weighted average). With
+        the DTE weights (correctness=2.0, all others=0.5), a perfect response
+        achieves a combined reward of 5.0 (2.0*2.0 + 0.5*0.5 + 0.5*0.5 +
+        0.5*0.5 + 0.5*0.5). When no weights dict is provided, defaults to
+        1.0 for every function.
 
         Args:
-            rewards_dict: Dictionary of reward lists from different functions
-            weights: Optional weights for combining rewards (defaults to equal weighting)
+            rewards_dict: Dictionary mapping reward function names to lists
+                of per-response reward values.
+            weights: Optional dictionary mapping reward function names to
+                scalar weights. Defaults to 1.0 for every function.
 
         Returns:
-            List of combined final rewards
+            List of combined (weighted-sum) rewards, one per response.
         """
         if not rewards_dict:
             return []
@@ -244,23 +253,17 @@ class DTERewardModel:
         # Get the number of responses
         num_responses = len(next(iter(rewards_dict.values())))
 
-        # Combine rewards
+        # Combine rewards as weighted SUM (not average)
         combined_rewards = []
         for i in range(num_responses):
             total_reward = 0.0
-            total_weight = 0.0
 
             for reward_type, reward_list in rewards_dict.items():
                 if i < len(reward_list):
                     weight = weights.get(reward_type, 1.0)
                     total_reward += reward_list[i] * weight
-                    total_weight += weight
 
-            # Normalize by total weight if weights were provided
-            if total_weight > 0:
-                combined_rewards.append(total_reward / total_weight)
-            else:
-                combined_rewards.append(0.0)
+            combined_rewards.append(total_reward)
 
         return combined_rewards
 

@@ -6,15 +6,16 @@ the data collection and filtering pipeline described in the DTE paper.
 """
 
 import json
-import time
-from typing import List, Dict, Any, Optional, Tuple
-from pathlib import Path
-from dataclasses import dataclass, asdict
 import random
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from datasets import load_dataset, Dataset
-from ..debate.manager import DebateManager, DebateResult
+from datasets import Dataset, load_dataset
+
 from ..core.logger import DTELogger
+from ..debate.manager import DebateManager, DebateResult
 
 
 @dataclass
@@ -98,7 +99,7 @@ class DebateDataGenerator:
 
         if self.logger:
             self.logger.info(f"Sampled {len(sampled_queries)} queries from {len(datasets)} datasets")
-            progress = self.logger.start_progress("Generating debate data", total=len(sampled_queries))
+            self.logger.start_progress("Generating debate data", total=len(sampled_queries))
 
         generated_examples = []
         successful_debates = 0
@@ -296,7 +297,7 @@ class DebateDataGenerator:
             "task_type": task_type,
             "total_time": debate_result.metrics.get("total_time", 0),
             "sycophancy_rate": debate_result.metrics.get("sycophancy_rate", 0),
-            "answer_progression": debate_result.answer_progression,
+            "answer_progression": debate_result.extracted_answers,
             "agent_count": len(debate_result.all_responses[0]) if debate_result.all_responses else 0
         }
 
@@ -458,5 +459,5 @@ class DebateDataGenerator:
         """Cleanup when generator is destroyed."""
         try:
             self.cleanup()
-        except:
+        except Exception:
             pass

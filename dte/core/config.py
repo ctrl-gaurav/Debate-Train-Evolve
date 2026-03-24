@@ -6,10 +6,12 @@ of the Debate, Train, Evolve pipeline, including validation and defaults.
 """
 
 import os
-import yaml
-from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
+
 from ..utils.helpers import ConfigurationError, validate_file_path, validate_model_name
 
 
@@ -18,6 +20,7 @@ class ModelConfig:
     """Configuration for model settings."""
     base_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct"
     base_model_path: Optional[str] = None
+    device: str = "auto"
     max_length: int = 2048
     temperature: float = 0.7
     top_p: float = 0.9
@@ -26,15 +29,27 @@ class ModelConfig:
 
 @dataclass
 class DebatePromptingConfig:
-    """Configuration for DTE debate prompting (not RCR)."""
-    # DTE uses structured debate prompting, not explicit RCR phases
+    """Configuration for RCR (Reflect-Critique-Refine) debate prompting.
+
+    RCR is the core prompting innovation of DTE. Each debate round after
+    round 0 follows three explicit phases: Reflect, Critique, Refine.
+
+    Attributes:
+        enabled: Whether to use RCR prompting. Defaults to ``True`` since
+            RCR is the core innovation of the DTE framework.
+        initial_prompt_type: Task type for initial prompts (math, arc, general).
+        include_agent_context: Include agent's own previous response in prompts.
+        include_peer_solutions: Include peer solutions in debate prompts.
+        defend_previous_answer: Encourage agents to defend correct answers.
+        require_novel_reasoning: Require agents to introduce novel reasoning.
+        critique_pairs: Number of peer solutions each agent must critique.
+            Defaults to 2 per the DTE paper specification.
+    """
+    enabled: bool = True  # RCR is the core DTE innovation; on by default
     initial_prompt_type: str = "math"  # math, arc, general
     include_agent_context: bool = True
     include_peer_solutions: bool = True
     defend_previous_answer: bool = True
-
-    # Legacy RCR config for backward compatibility
-    enabled: bool = False  # DTE doesn't use explicit RCR
     require_novel_reasoning: bool = True
     critique_pairs: int = 2
 
@@ -565,8 +580,11 @@ class DTEConfig:
         if not self.datasets.names:
             errors.append("datasets.names cannot be empty")
 
-        # Validate each dataset name
-        valid_datasets = ["gsm8k", "gsm_plus", "math", "arc_challenge", "arc_easy"]
+        # Validate each dataset name against the full set of 7 supported datasets
+        valid_datasets = [
+            "gsm8k", "gsm_plus", "math", "arc_challenge", "arc_easy",
+            "gpqa", "commonsense_qa",
+        ]
         for dataset_name in self.datasets.names:
             if dataset_name not in valid_datasets:
                 errors.append(f"Unknown dataset: {dataset_name}. Valid options: {valid_datasets}")
@@ -620,6 +638,7 @@ class DTEConfig:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(self.experiment.seed)
             import random
+
             import numpy as np
             random.seed(self.experiment.seed)
             np.random.seed(self.experiment.seed)

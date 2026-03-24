@@ -6,7 +6,8 @@ including data cleaning, formatting, validation, and preparation for training.
 Implements the exact data processing strategy from the original DTE implementation.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from .generator import TrainingExample
 
 
